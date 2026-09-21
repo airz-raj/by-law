@@ -7,6 +7,7 @@ No I/O, no framework imports, standard library only.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from enum import StrEnum
 from typing import Mapping
 
@@ -93,7 +94,7 @@ class ExplanationStep:
 class Deadline:
     """Computed respond-by date with explanation."""
 
-    respond_by: "date | None"  # noqa: F821 — forward ref resolved at runtime
+    respond_by: date | None
     days_left: int | None
     status: DeadlineStatus
     basis: DeadlineBasis
@@ -131,7 +132,7 @@ class MatchReason(StrEnum):
 class FoundDate:
     """A date found in free text with its position."""
 
-    value: "date"  # noqa: F821
+    value: date
     start: int
     end: int
     raw: str
