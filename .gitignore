@@ -1,0 +1,21 @@
+# Agent workflows
+.agents/
+
+# Environment
+.env
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
