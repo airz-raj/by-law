@@ -1,0 +1,129 @@
+[
+  {
+    "id": "in.ni_act.s138_demand",
+    "title": {
+      "en": "Cheque dishonour demand (Section 138)",
+      "hi": "चेक बाउंस का नोटिस (धारा 138)"
+    },
+    "clock_starts": "receipt",
+    "period_days": 15,
+    "what_you_must_do": {
+      "en": "You must pay the demanded amount within 15 days of receiving the notice.",
+      "hi": "आपको नोटिस मिलने के 15 दिनों के भीतर मांगी गई राशि का भुगतान करना होगा।"
+    },
+    "what_can_happen_next": {
+      "en": "If unpaid, the payee may file a criminal complaint within one month after the 15-day period ends.",
+      "hi": "यदि भुगतान नहीं किया जाता है, तो भुगतान पाने वाला 15 दिन की अवधि समाप्त होने के एक महीने के भीतर आपराधिक शिकायत दर्ज कर सकता है।"
+    },
+    "your_rights": [
+      {
+        "en": "You can dispute the claim if you believe the cheque was not given for a legally enforceable debt.",
+        "hi": "यदि आपको लगता है कि चेक कानूनी रूप से लागू करने योग्य ऋण के लिए नहीं दिया गया था, तो आप दावे का विरोध कर सकते हैं।"
+      }
+    ],
+    "trigger_terms": [
+      "section 138",
+      "negotiable instruments",
+      "dishonour",
+      "cheque"
+    ],
+    "min_trigger_hits": 2,
+    "sources": [
+      {
+        "label": "Negotiable Instruments Act, 1881: s.138 proviso (c), s.142(1)(b)",
+        "url": "https://www.indiacode.nic.in/bitstream/123456789/2189/1/A1881-26.pdf"
+      }
+    ],
+    "caveats": [
+      {
+        "en": "Make sure the notice was sent within 30 days of the cheque bouncing.",
+        "hi": "सुनिश्चित करें कि चेक बाउंस होने के 30 दिनों के भीतर नोटिस भेजा गया था।"
+      }
+    ],
+    "last_reviewed": "2026-09-21"
+  },
+  {
+    "id": "in.sarfaesi.s13_2_demand",
+    "title": {
+      "en": "Secured loan demand (SARFAESI)",
+      "hi": "सुरक्षित ऋण मांग (SARFAESI)"
+    },
+    "clock_starts": "notice_date",
+    "period_days": 60,
+    "what_you_must_do": {
+      "en": "You must discharge your liabilities to the secured creditor within 60 days from the date of the notice.",
+      "hi": "आपको नोटिस की तारीख से 60 दिनों के भीतर सुरक्षित लेनदार के प्रति अपनी देनदारियों का निर्वहन करना होगा।"
+    },
+    "what_can_happen_next": {
+      "en": "If you fail to pay, the lender can take measures like taking possession of or selling the secured asset.",
+      "hi": "यदि आप भुगतान करने में विफल रहते हैं, तो ऋणदाता सुरक्षित संपत्ति पर कब्ज़ा करने या बेचने जैसे उपाय कर सकता है।"
+    },
+    "your_rights": [
+      {
+        "en": "You may make a representation or raise an objection, to which the lender must reply with reasons within 15 days.",
+        "hi": "आप कोई प्रतिवेदन दे सकते हैं या आपत्ति उठा सकते हैं, जिसका उत्तर ऋणदाता को 15 दिनों के भीतर कारणों के साथ देना होगा।"
+      }
+    ],
+    "trigger_terms": [
+      "sarfaesi",
+      "section 13(2)",
+      "secured asset",
+      "non-performing asset",
+      "npa"
+    ],
+    "min_trigger_hits": 2,
+    "sources": [
+      {
+        "label": "SARFAESI Act, 2002: s.13(2), s.13(3A), s.13(4)",
+        "url": "https://www.indiacode.nic.in/bitstream/123456789/2006/1/a2002-54.pdf"
+      }
+    ],
+    "caveats": [],
+    "last_reviewed": "2026-09-21"
+  },
+  {
+    "id": "in.tpa.s106_termination",
+    "title": {
+      "en": "Ending a month-to-month tenancy",
+      "hi": "किराएदारी समाप्त करना (महीने-दर-महीने)"
+    },
+    "clock_starts": "receipt",
+    "period_days": 15,
+    "what_you_must_do": {
+      "en": "You must vacate the premises within 15 days of receiving the notice, unless your agreement states otherwise.",
+      "hi": "आपको नोटिस मिलने के 15 दिनों के भीतर परिसर खाली करना होगा, जब तक कि आपके समझौते में कुछ और न लिखा हो।"
+    },
+    "what_can_happen_next": {
+      "en": "If you do not vacate, the landlord can file an eviction suit in court.",
+      "hi": "यदि आप खाली नहीं करते हैं, तो मकान मालिक अदालत में बेदखली का मुकदमा दायर कर सकता है।"
+    },
+    "your_rights": [
+      {
+        "en": "You have the right to remain until the legal eviction process is completed through a court.",
+        "hi": "आपको तब तक रहने का अधिकार है जब तक कि अदालत के माध्यम से कानूनी बेदखली की प्रक्रिया पूरी न हो जाए।"
+      }
+    ],
+    "trigger_terms": [
+      "section 106",
+      "transfer of property",
+      "vacate",
+      "terminate",
+      "tenancy",
+      "lease"
+    ],
+    "min_trigger_hits": 2,
+    "sources": [
+      {
+        "label": "Transfer of Property Act, 1882: s.106",
+        "url": "https://www.indiacode.nic.in/bitstream/123456789/2338/1/a1882-04.pdf"
+      }
+    ],
+    "caveats": [
+      {
+        "en": "State rent-control laws and your agreement can change this; many 11-month 'rent agreements' are leave-and-licence agreements, which s.106 may not govern; suggest the cross-check.",
+        "hi": "राज्य के किराया नियंत्रण कानून और आपका समझौता इसे बदल सकते हैं; कई 11-महीने के 'किराया समझौते' लीव-एंड-लाइसेंस समझौते होते हैं, जिन पर धारा 106 लागू नहीं हो सकती है; क्रॉस-चेक का सुझाव दें।"
+      }
+    ],
+    "last_reviewed": "2026-09-21"
+  }
+]
