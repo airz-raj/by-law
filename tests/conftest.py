@@ -22,16 +22,27 @@ TODAY = date(2026, 9, 22)
 SAMPLE_RECEIPT_DATE = date(2026, 9, 16)
 
 
+def make_settings(**overrides: Any) -> Settings:
+    """Build settings for a test, with a placeholder key and fixed model.
+
+    Every test builds settings through this, so none of them reads the
+    environment and none has to remember the credential guard.
+    """
+    values: dict[str, Any] = {
+        "llm_backend": "aistudio",
+        "gemini_api_key": "not-a-real-key",
+        "gemini_model": "gemini-flash-test",
+        "app_env": "dev",
+        "rate_limit_per_minute": 10,
+    }
+    values.update(overrides)
+    return Settings(**values)
+
+
 @pytest.fixture
 def settings() -> Settings:
     """Settings with a placeholder key, so no test reads the environment."""
-    return Settings(
-        llm_backend="aistudio",
-        gemini_api_key="not-a-real-key",
-        gemini_model="gemini-flash-test",
-        app_env="dev",
-        rate_limit_per_minute=10,
-    )
+    return make_settings()
 
 
 @pytest.fixture

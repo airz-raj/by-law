@@ -71,11 +71,13 @@ def create_app(settings: Settings | None = None, llm: LLMPort | None = None) -> 
     # Added last runs first, so this list reads innermost to outermost.
     app.add_middleware(
         BaseHTTPMiddleware,
-        dispatch=BodySizeLimitMiddleware(app, resolved).__call__,
+        dispatch=BodySizeLimitMiddleware(app, resolved, problems.response_for).__call__,
     )
     app.add_middleware(
         BaseHTTPMiddleware,
-        dispatch=RateLimitMiddleware(app, resolved, services.limiter).__call__,
+        dispatch=RateLimitMiddleware(
+            app, resolved, services.limiter, problems.response_for
+        ).__call__,
     )
     app.add_middleware(GZipMiddleware, minimum_size=GZIP_MINIMUM_SIZE)
     app.add_middleware(BaseHTTPMiddleware, dispatch=SecurityHeadersMiddleware(app).__call__)

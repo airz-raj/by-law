@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.adapters.cache import TTLCache
-from app.config import Settings
+from tests.conftest import make_settings
 
 BASE_KEY_ARGS = {
     "prompt_version": "2026-09-b",
@@ -15,7 +15,7 @@ BASE_KEY_ARGS = {
 
 def make_cache(clock: list[float], *, max_entries: int = 3, ttl: int = 900) -> TTLCache:
     """Build a cache whose clock the test controls."""
-    settings = Settings(cache_max_entries=max_entries, cache_ttl_seconds=ttl)
+    settings = make_settings(cache_max_entries=max_entries, cache_ttl_seconds=ttl)
     return TTLCache(settings, clock=lambda: clock[0])
 
 

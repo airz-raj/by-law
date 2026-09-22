@@ -57,3 +57,34 @@ def test_too_short_quote():
     receipt = locate(quote, source)
     assert receipt.found is False
     assert receipt.reason == ReceiptReason.TOO_SHORT
+
+
+def test_a_quote_shorter_than_twelve_characters_is_not_confirmed():
+    from app.core.evidence import locate
+    from app.core.models import ReceiptReason
+
+    receipt = locate("too short", "The document says too short somewhere in it.")
+    assert receipt.found is False
+    assert receipt.reason is ReceiptReason.TOO_SHORT
+
+
+def test_a_quote_whose_characters_were_dropped_in_normalising_still_resolves():
+    """Soft hyphens and zero-width marks fold away, so offsets must survive them."""
+    from app.core.evidence import locate
+
+    source = "The tenant shall­vacate the premises within seven days of receipt."
+    receipt = locate("vacate the premises within seven days", source)
+    assert receipt.found is True
+    assert receipt.start is not None
+    assert "vacate" in source[receipt.start : receipt.end]
+
+
+def test_offsets_slice_back_to_the_matched_text_across_line_breaks():
+    from app.core.evidence import locate
+
+    source = "You are called upon to\nvacate the tenanted premises\nwithin seven days."
+    receipt = locate("vacate the tenanted premises within seven days", source)
+    assert receipt.found is True
+    sliced = source[receipt.start : receipt.end]
+    assert "vacate" in sliced
+    assert "seven days" in sliced

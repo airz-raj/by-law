@@ -3,13 +3,13 @@ import io
 import pytest
 
 from app.adapters.extract import extract_text
-from app.config import Settings
 from app.errors import InputRejected
+from tests.conftest import make_settings
 
 
 @pytest.fixture
 def settings():
-    return Settings(
+    return make_settings(
         max_upload_bytes=10000,
         max_pdf_pages=5,
         min_notice_chars=10,

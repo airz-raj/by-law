@@ -16,7 +16,7 @@ from starlette.responses import Response
 from starlette.types import ASGIApp
 
 from app.config import Settings
-from app.errors import RateLimitExceeded
+from app.errors import MohlatError, RateLimitExceeded
 
 FORWARDED_FOR = "x-forwarded-for"
 RETRY_AFTER_HEADER = "Retry-After"
@@ -24,6 +24,7 @@ UNKNOWN_CLIENT = "unknown"
 WINDOW_SECONDS = 60
 
 Handler = Callable[[Request], Awaitable[Response]]
+Rejector = Callable[[Request, MohlatError], Response]
 
 
 def client_key(request: Request, *, trust_proxy: bool) -> str:
@@ -92,16 +93,27 @@ class RateLimiter:
 class RateLimitMiddleware:
     """Apply the limiter to state-changing API calls."""
 
-    def __init__(self, app: ASGIApp, settings: Settings, limiter: RateLimiter) -> None:
+    def __init__(
+        self, app: ASGIApp, settings: Settings, limiter: RateLimiter, reject: Rejector
+    ) -> None:
+        """Build the middleware.
+
+        Args:
+            app: The application being wrapped.
+            settings: Supplies whether to trust ``X-Forwarded-For``.
+            limiter: The shared token bucket.
+            reject: Turns the refusal into a problem response.
+        """
         self.app = app
         self._settings = settings
         self._limiter = limiter
+        self._reject = reject
 
     async def __call__(self, request: Request, call_next: Handler) -> Response:
-        """Let the request through, or raise so the handler returns 429."""
+        """Let the request through, or answer 429 with Retry-After."""
         if request.method == "POST" and request.url.path.startswith("/api/"):
             key = client_key(request, trust_proxy=self._settings.trust_proxy)
             wait = self._limiter.take(key)
             if wait is not None:
-                raise RateLimitExceeded(wait)
+                return self._reject(request, RateLimitExceeded(wait))
         return await call_next(request)

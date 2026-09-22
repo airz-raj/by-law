@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from app.errors import LLMOutputInvalid, LLMUnavailable
 from tests.paths import LLM_FIXTURES
@@ -76,7 +76,12 @@ class FakeLLM:
         if not queued:
             raise LLMOutputInvalid(f"the fake has no answer for {task}")
         raw = queued.pop(0) if len(queued) > 1 else queued[0]
-        return schema.model_validate(raw)
+        try:
+            return schema.model_validate(raw)
+        except ValidationError as error:
+            # The real adapter retries once and then raises this, so the
+            # fake must fail the same way rather than leaking a pydantic error.
+            raise LLMOutputInvalid(f"scripted answer does not fit {schema.__name__}") from error
 
 
 class UnavailableLLM:

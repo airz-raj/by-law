@@ -20,6 +20,7 @@ from app.errors import (
     InputRejected,
     LLMOutputInvalid,
     LLMUnavailable,
+    MohlatError,
     RateLimitExceeded,
 )
 from app.observability import get_logger
@@ -83,22 +84,50 @@ def problem(
     return JSONResponse(body, status_code=status, media_type=CONTENT_TYPE, headers=headers or {})
 
 
-async def _input_rejected(request: Request, exc: InputRejected) -> JSONResponse:
-    """Answer an InputRejected with the status its code maps to."""
+def response_for(request: Request, error: MohlatError) -> JSONResponse:
+    """Build the problem response for an error raised outside the handlers.
+
+    Middleware runs outside the exception-handling layer, so a middleware
+    that rejects a request builds its answer through this function rather
+    than raising.
+    """
+    if isinstance(error, RateLimitExceeded):
+        return _rate_limit_response(request, error)
+    if isinstance(error, InputRejected):
+        return _input_rejected_response(request, error)
+    return problem(  # pragma: no cover - every middleware error is one of the above
+        request=request,
+        code="INTERNAL",
+        status=HTTPStatus.INTERNAL_SERVER_ERROR,
+        detail=GENERIC_DETAIL,
+    )
+
+
+def _input_rejected_response(request: Request, exc: InputRejected) -> JSONResponse:
+    """Build the response for an InputRejected."""
     status = _INPUT_STATUS.get(exc.code, HTTPStatus.BAD_REQUEST)
     return problem(request=request, code=exc.code, status=status, detail=exc.detail)
 
 
-async def _rate_limited(request: Request, exc: RateLimitExceeded) -> JSONResponse:
-    """Answer a rate-limit breach with 429 and Retry-After."""
-    retry_after = str(max(1, round(exc.retry_after_seconds)))
+def _rate_limit_response(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Build the 429 response, with Retry-After."""
     return problem(
         request=request,
         code="RATE_LIMITED",
         status=HTTPStatus.TOO_MANY_REQUESTS,
         detail=RATE_LIMIT_DETAIL,
-        headers={"Retry-After": retry_after},
+        headers={"Retry-After": str(max(1, round(exc.retry_after_seconds)))},
     )
+
+
+async def _input_rejected(request: Request, exc: InputRejected) -> JSONResponse:
+    """Answer an InputRejected with the status its code maps to."""
+    return _input_rejected_response(request, exc)
+
+
+async def _rate_limited(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Answer a rate-limit breach with 429 and Retry-After."""
+    return _rate_limit_response(request, exc)
 
 
 async def _llm_unavailable(request: Request, _exc: LLMUnavailable) -> JSONResponse:

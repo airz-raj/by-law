@@ -332,3 +332,60 @@ def test_first_day_is_excluded_per_general_clauses_act() -> None:
     )
     assert result.respond_by == date(2026, 3, 2)
     assert StepCode.EXCLUDE_FIRST_DAY in [step.code for step in result.steps]
+
+
+def test_a_notice_date_rule_falls_back_to_the_receipt_date() -> None:
+    """A SARFAESI-style rule counts from the notice date, but a report is
+    better than none when only the receipt date was found."""
+    result = compute_deadline(
+        rule=NOTICE_RULE,
+        notice_date=None,
+        receipt_date=date(2026, 7, 10),
+        stated_period_days=None,
+        stated_by_date=None,
+        today=date(2026, 7, 14),
+    )
+    assert result.respond_by == date(2026, 9, 8)
+    assert result.provisional is True
+    assert StepCode.RECEIPT_DATE_MISSING in [step.code for step in result.steps]
+
+
+def test_a_notice_date_rule_with_no_date_at_all_is_unknown() -> None:
+    result = compute_deadline(
+        rule=NOTICE_RULE,
+        notice_date=None,
+        receipt_date=None,
+        stated_period_days=None,
+        stated_by_date=None,
+        today=TODAY,
+    )
+    assert result.respond_by is None
+    assert result.status is DeadlineStatus.UNKNOWN
+    assert result.basis is DeadlineBasis.RULEBOOK
+
+
+def test_a_stated_period_with_no_anchor_cannot_be_counted() -> None:
+    result = compute_deadline(
+        rule=None,
+        notice_date=None,
+        receipt_date=None,
+        stated_period_days=10,
+        stated_by_date=None,
+        today=TODAY,
+    )
+    assert result.respond_by is None
+    assert result.status is DeadlineStatus.UNKNOWN
+    assert StepCode.NO_DEADLINE_FOUND in [step.code for step in result.steps]
+
+
+def test_a_stated_period_without_an_anchor_cannot_beat_a_rule() -> None:
+    """The rule has a receipt date; the stated period has nothing to count from."""
+    result = compute_deadline(
+        rule=RECEIPT_RULE,
+        notice_date=None,
+        receipt_date=date(2026, 3, 1),
+        stated_period_days=None,
+        stated_by_date=None,
+        today=TODAY,
+    )
+    assert result.respond_by == date(2026, 3, 16)
