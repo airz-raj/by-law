@@ -1,154 +1,185 @@
-"""Load and match statutory rules against notices."""
+"""Load the statutory rulebook and match a notice against it.
+
+A notice is matched to a rule only when the model's label and keyword
+evidence in the text agree, so a confident but wrong label cannot on its
+own decide a deadline.
+"""
 
 from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
-from app.core.models import ClockStart, MatchReason
-from app.core.deadlines import Rule
+from app.core.models import (
+    ClockStart,
+    LocalisedText,
+    MatchReason,
+    Rule,
+    Rulebook,
+    RuleMatch,
+    RuleSource,
+)
 
-
-@dataclass(frozen=True, slots=True)
-class LocalisedText:
-    en: str
-    hi: str
-
-
-@dataclass(frozen=True, slots=True)
-class Source:
-    label: str
-    url: str
+_REQUIRED_TEXT_FIELDS = ("title", "what_you_must_do", "what_can_happen_next")
 
 
-@dataclass(frozen=True, slots=True)
-class RuleDetails:
-    id: str
-    title: LocalisedText
-    clock_starts: ClockStart
-    period_days: int
-    what_you_must_do: LocalisedText
-    what_can_happen_next: LocalisedText
-    your_rights: tuple[LocalisedText, ...]
-    trigger_terms: tuple[str, ...]
-    min_trigger_hits: int
-    sources: tuple[Source, ...]
-    caveats: tuple[LocalisedText, ...]
-    last_reviewed: str
+def _localised(raw: Any, rule_id: str, field: str) -> LocalisedText:
+    """Build a LocalisedText from raw JSON, requiring both languages."""
+    if not isinstance(raw, dict):
+        raise ValueError(f"rule {rule_id}: {field} must be an object with en and hi")
+    en, hi = raw.get("en"), raw.get("hi")
+    if not isinstance(en, str) or not en.strip():
+        raise ValueError(f"rule {rule_id}: {field} is missing English text")
+    if not isinstance(hi, str) or not hi.strip():
+        raise ValueError(f"rule {rule_id}: {field} is missing Hindi text")
+    return LocalisedText(en=en, hi=hi)
 
 
-@dataclass(frozen=True, slots=True)
-class Rulebook:
-    rules: tuple[RuleDetails, ...]
-
-    def get(self, rule_id: str) -> RuleDetails | None:
-        for r in self.rules:
-            if r.id == rule_id:
-                return r
-        return None
+def _localised_list(raw: Any, rule_id: str, field: str) -> tuple[LocalisedText, ...]:
+    """Build a tuple of LocalisedText from a raw JSON list."""
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise ValueError(f"rule {rule_id}: {field} must be a list")
+    return tuple(_localised(item, rule_id, field) for item in raw)
 
 
-@dataclass(frozen=True, slots=True)
-class RuleMatch:
-    rule: RuleDetails | None
-    reason: MatchReason
-    matched_terms: tuple[str, ...]
+def _sources(raw: Any, rule_id: str) -> tuple[RuleSource, ...]:
+    """Build the citation tuple, requiring a label and a URL for each."""
+    if not isinstance(raw, list) or not raw:
+        raise ValueError(f"rule {rule_id}: at least one source is required")
+    built: list[RuleSource] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            raise ValueError(f"rule {rule_id}: each source must be an object")
+        label, url = item.get("label"), item.get("url")
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError(f"rule {rule_id}: a source is missing its label")
+        if not isinstance(url, str) or not url.startswith("https://"):
+            raise ValueError(f"rule {rule_id}: source {label!r} needs an https URL")
+        built.append(RuleSource(label=label, url=url))
+    return tuple(built)
+
+
+def _trigger_terms(raw: Any, rule_id: str) -> tuple[str, ...]:
+    """Build the trigger-term tuple, requiring at least two distinct terms."""
+    if not isinstance(raw, list) or len(raw) < 2:
+        raise ValueError(f"rule {rule_id}: at least two trigger terms are required")
+    terms = tuple(str(term) for term in raw)
+    if len(set(terms)) != len(terms):
+        raise ValueError(f"rule {rule_id}: trigger terms must be distinct")
+    return terms
+
+
+def _parse_rule(raw: Any, seen_ids: set[str]) -> Rule:
+    """Validate one raw rule object and build a Rule."""
+    if not isinstance(raw, dict):
+        raise ValueError("every rule must be a JSON object")
+
+    rule_id = raw.get("id")
+    if not isinstance(rule_id, str) or not rule_id.strip():
+        raise ValueError("a rule is missing its id")
+    if rule_id in seen_ids:
+        raise ValueError(f"duplicate rule id: {rule_id}")
+
+    period_days = raw.get("period_days")
+    if not isinstance(period_days, int) or isinstance(period_days, bool) or period_days <= 0:
+        raise ValueError(f"rule {rule_id}: period_days must be a positive integer")
+
+    clock_starts = raw.get("clock_starts")
+    try:
+        clock = ClockStart(clock_starts)
+    except ValueError as exc:
+        raise ValueError(
+            f"rule {rule_id}: clock_starts must be 'receipt' or 'notice_date'"
+        ) from exc
+
+    min_trigger_hits = raw.get("min_trigger_hits", 1)
+    if not isinstance(min_trigger_hits, int) or min_trigger_hits < 1:
+        raise ValueError(f"rule {rule_id}: min_trigger_hits must be 1 or more")
+
+    last_reviewed = raw.get("last_reviewed")
+    if not isinstance(last_reviewed, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", last_reviewed):
+        raise ValueError(f"rule {rule_id}: last_reviewed must be a YYYY-MM-DD date")
+
+    texts = {field: _localised(raw.get(field), rule_id, field) for field in _REQUIRED_TEXT_FIELDS}
+
+    return Rule(
+        id=rule_id,
+        title=texts["title"],
+        clock_starts=clock,
+        period_days=period_days,
+        what_you_must_do=texts["what_you_must_do"],
+        what_can_happen_next=texts["what_can_happen_next"],
+        your_rights=_localised_list(raw.get("your_rights"), rule_id, "your_rights"),
+        trigger_terms=_trigger_terms(raw.get("trigger_terms"), rule_id),
+        min_trigger_hits=min_trigger_hits,
+        sources=_sources(raw.get("sources"), rule_id),
+        caveats=_localised_list(raw.get("caveats"), rule_id, "caveats"),
+        last_reviewed=last_reviewed,
+    )
 
 
 def load_rulebook(path: Path) -> Rulebook:
-    """Load and validate the rulebook from a JSON file."""
-    with path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
+    """Load and validate the rulebook at *path*.
 
-    if not isinstance(data, list):
-        raise ValueError("Rulebook must be a JSON array of objects")
+    Args:
+        path: JSON file holding an array of rule objects.
 
-    parsed_rules: list[RuleDetails] = []
+    Returns:
+        The validated rulebook.
+
+    Raises:
+        ValueError: If the file is not an array, an id repeats, a period is
+            not positive, or any text is missing English or Hindi.
+    """
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, list):
+        raise ValueError("the rulebook must be a JSON array of rule objects")
+
+    rules: list[Rule] = []
     seen_ids: set[str] = set()
+    for item in raw:
+        rule = _parse_rule(item, seen_ids)
+        seen_ids.add(rule.id)
+        rules.append(rule)
 
-    for item in data:
-        rule_id = item.get("id")
-        if not rule_id:
-            raise ValueError("Rule missing id")
-        if rule_id in seen_ids:
-            raise ValueError(f"Duplicate rule id: {rule_id}")
-        seen_ids.add(rule_id)
-
-        period_days = item.get("period_days")
-        if not isinstance(period_days, int) or period_days <= 0:
-            raise ValueError(f"Rule {rule_id} has invalid period_days: {period_days}")
-
-        def _parse_text(obj: dict[str, str] | None, field_name: str) -> LocalisedText:
-            if not obj or not isinstance(obj, dict):
-                raise ValueError(f"Rule {rule_id} missing {field_name}")
-            en = obj.get("en")
-            hi = obj.get("hi")
-            if not en or not hi:
-                raise ValueError(f"Rule {rule_id} {field_name} missing en or hi")
-            return LocalisedText(en=en, hi=hi)
-
-        title = _parse_text(item.get("title"), "title")
-        wymd = _parse_text(item.get("what_you_must_do"), "what_you_must_do")
-        wchn = _parse_text(item.get("what_can_happen_next"), "what_can_happen_next")
-
-        your_rights = tuple(
-            _parse_text(yr, "your_rights item") for yr in item.get("your_rights", [])
-        )
-        caveats = tuple(
-            _parse_text(cv, "caveats item") for cv in item.get("caveats", [])
-        )
-
-        sources = tuple(
-            Source(label=s.get("label", ""), url=s.get("url", ""))
-            for s in item.get("sources", [])
-        )
-
-        parsed_rules.append(
-            RuleDetails(
-                id=rule_id,
-                title=title,
-                clock_starts=ClockStart(item.get("clock_starts")),
-                period_days=period_days,
-                what_you_must_do=wymd,
-                what_can_happen_next=wchn,
-                your_rights=your_rights,
-                trigger_terms=tuple(item.get("trigger_terms", [])),
-                min_trigger_hits=item.get("min_trigger_hits", 1),
-                sources=sources,
-                caveats=caveats,
-                last_reviewed=item.get("last_reviewed", ""),
-            )
-        )
-
-    return Rulebook(rules=tuple(parsed_rules))
+    if not rules:
+        raise ValueError("the rulebook is empty")
+    return Rulebook(rules=tuple(rules))
 
 
 def match_rule(rulebook: Rulebook, text: str, model_label: str) -> RuleMatch:
-    """Match a rule by model label and trigger term counts in text."""
+    """Match *text* to a rule, requiring the model label and keywords to agree.
+
+    Args:
+        rulebook: The loaded rulebook.
+        text: The notice text, already masked.
+        model_label: The rule id the model chose, or any other string.
+
+    Returns:
+        A RuleMatch carrying the rule when both votes agree, and otherwise
+        no rule plus the reason it was rejected.
+    """
     rule = rulebook.get(model_label)
-    if not rule:
-        return RuleMatch(rule=None, reason=MatchReason.UNKNOWN_LABEL, matched_terms=())
-
-    matched_terms: set[str] = set()
-    text_lower = text.lower()
-
-    for term in rule.trigger_terms:
-        # Case-insensitive, word-boundary match
-        pattern = re.compile(rf"\b{re.escape(term.lower())}\b")
-        if pattern.search(text_lower):
-            matched_terms.add(term)
-
-    if len(matched_terms) < rule.min_trigger_hits:
-        return RuleMatch(
-            rule=None,
-            reason=MatchReason.TOO_FEW_TRIGGERS,
-            matched_terms=tuple(sorted(matched_terms)),
+    if rule is None:
+        reason = (
+            MatchReason.MODEL_SAID_OTHER if model_label == "other" else MatchReason.UNKNOWN_LABEL
         )
+        return RuleMatch(rule=None, reason=reason, matched_terms=())
 
-    return RuleMatch(
-        rule=rule,
-        reason=MatchReason.MATCHED,
-        matched_terms=tuple(sorted(matched_terms)),
+    lowered = text.lower()
+    matched = tuple(
+        sorted(
+            term
+            for term in rule.trigger_terms
+            if re.search(rf"\b{re.escape(term.lower())}\b", lowered)
+        )
     )
+
+    if len(matched) < rule.min_trigger_hits:
+        return RuleMatch(rule=None, reason=MatchReason.TOO_FEW_TRIGGERS, matched_terms=matched)
+
+    return RuleMatch(rule=rule, reason=MatchReason.MATCHED, matched_terms=matched)

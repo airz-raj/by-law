@@ -6,11 +6,10 @@ No I/O, no framework imports, standard library only.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
-from typing import Mapping
-
 
 # ---------------------------------------------------------------------------
 # Receipt: proof that a model-generated quote exists in the source text
@@ -107,6 +106,13 @@ class Deadline:
 # ---------------------------------------------------------------------------
 
 
+class Language(StrEnum):
+    """Languages the explanations can be written in."""
+
+    EN = "en"
+    HI = "hi"
+
+
 class ClockStart(StrEnum):
     """When the deadline clock begins."""
 
@@ -121,6 +127,71 @@ class MatchReason(StrEnum):
     MODEL_SAID_OTHER = "MODEL_SAID_OTHER"
     UNKNOWN_LABEL = "UNKNOWN_LABEL"
     TOO_FEW_TRIGGERS = "TOO_FEW_TRIGGERS"
+
+
+@dataclass(frozen=True, slots=True)
+class LocalisedText:
+    """A string held in both supported languages."""
+
+    en: str
+    hi: str
+
+    def into(self, language: Language) -> str:
+        """Return the text in *language*."""
+        return self.hi if language is Language.HI else self.en
+
+
+@dataclass(frozen=True, slots=True)
+class RuleSource:
+    """A citation for a rule, with the URL that was checked."""
+
+    label: str
+    url: str
+
+
+@dataclass(frozen=True, slots=True)
+class Rule:
+    """One statutory rule: a period, its anchor, and what the law provides."""
+
+    id: str
+    title: LocalisedText
+    clock_starts: ClockStart
+    period_days: int
+    what_you_must_do: LocalisedText
+    what_can_happen_next: LocalisedText
+    your_rights: tuple[LocalisedText, ...]
+    trigger_terms: tuple[str, ...]
+    min_trigger_hits: int
+    sources: tuple[RuleSource, ...]
+    caveats: tuple[LocalisedText, ...]
+    last_reviewed: str
+
+
+@dataclass(frozen=True, slots=True)
+class Rulebook:
+    """The loaded set of rules for one jurisdiction."""
+
+    rules: tuple[Rule, ...]
+
+    def get(self, rule_id: str) -> Rule | None:
+        """Return the rule with *rule_id*, or None if there is no such rule."""
+        for rule in self.rules:
+            if rule.id == rule_id:
+                return rule
+        return None
+
+    def ids(self) -> tuple[str, ...]:
+        """Return every rule id, in file order."""
+        return tuple(rule.id for rule in self.rules)
+
+
+@dataclass(frozen=True, slots=True)
+class RuleMatch:
+    """The outcome of matching a notice against the rulebook."""
+
+    rule: Rule | None
+    reason: MatchReason
+    matched_terms: tuple[str, ...]
 
 
 # ---------------------------------------------------------------------------
@@ -182,6 +253,15 @@ class Section12Clause(StrEnum):
     INCOME_BELOW_LIMIT = "INCOME_BELOW_LIMIT"
 
 
+class LegalAidStep(StrEnum):
+    """Next steps offered after a Section 12 eligibility check."""
+
+    CONTACT_DLSA = "CONTACT_DLSA"
+    CALL_NALSA_15100 = "CALL_NALSA_15100"
+    PRIMA_FACIE_REQUIRED = "PRIMA_FACIE_REQUIRED"
+    CHECK_STATE_INCOME_LIMIT = "CHECK_STATE_INCOME_LIMIT"
+
+
 @dataclass(frozen=True, slots=True)
 class EligibilityResult:
     """Result of checking Section 12 legal-aid eligibility."""
@@ -189,4 +269,4 @@ class EligibilityResult:
     likely_eligible: bool
     matched: tuple[Section12Clause, ...]
     income_check_needed: bool
-    next_steps: tuple[StepCode | str, ...]
+    next_steps: tuple[LegalAidStep, ...]

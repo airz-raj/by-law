@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from app.core.models import EligibilityResult, Section12Clause
+from app.core.models import EligibilityResult, LegalAidStep, Section12Clause
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,10 +36,13 @@ _CLAUSE_MAP: list[tuple[str, Section12Clause]] = [
     ("custody", Section12Clause.CUSTODY),
 ]
 
-NEXT_STEP_CONTACT_DLSA = "CONTACT_DLSA"
-NEXT_STEP_CALL_NALSA = "CALL_NALSA_15100"
-NEXT_STEP_PRIMA_FACIE = "PRIMA_FACIE_REQUIRED"
-NEXT_STEP_CHECK_INCOME_LIMIT = "CHECK_STATE_INCOME_LIMIT"
+# Offered after every check: the authority must also be satisfied there is a
+# prima facie case (s.13), and income limits are set by each State Government.
+_ALWAYS_OFFERED: tuple[LegalAidStep, ...] = (
+    LegalAidStep.CONTACT_DLSA,
+    LegalAidStep.CALL_NALSA_15100,
+    LegalAidStep.PRIMA_FACIE_REQUIRED,
+)
 
 
 def check_eligibility(answers: LegalAidAnswers) -> EligibilityResult:
@@ -63,14 +66,9 @@ def check_eligibility(answers: LegalAidAnswers) -> EligibilityResult:
 
     likely_eligible = len(matched) > 0
 
-    next_steps: list[str] = [
-        NEXT_STEP_CONTACT_DLSA,
-        NEXT_STEP_CALL_NALSA,
-        NEXT_STEP_PRIMA_FACIE,
-    ]
-
+    next_steps: list[LegalAidStep] = list(_ALWAYS_OFFERED)
     if income_check_needed:
-        next_steps.append(NEXT_STEP_CHECK_INCOME_LIMIT)
+        next_steps.append(LegalAidStep.CHECK_STATE_INCOME_LIMIT)
 
     return EligibilityResult(
         likely_eligible=likely_eligible,

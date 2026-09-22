@@ -21,7 +21,10 @@ _AI_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"note\s+to\s+AI", re.I),
     re.compile(r"respond\s+only\s+with", re.I),
     re.compile(r"\bact\s+as\s+(?:a\s+|an\s+)?(?:AI|assistant|bot|model|language\s+model)\b", re.I),
-    re.compile(r"(?:describe|report|state)\s+(?:this|the)\s+(?:notice|document)\s+as\s+(?:fully\s+)?valid", re.I),  # noqa: E501
+    re.compile(
+        r"(?:describe|report|state)\s+(?:this|the)\s+(?:notice|document)\s+as\s+(?:fully\s+)?valid",
+        re.I,
+    ),
     # Hindi equivalents
     re.compile(r"पिछले\s+(?:सभी\s+)?निर्देशों?\s+को\s+(?:अनदेखा|नज़रअंदाज़)\s+कर", re.I),
     re.compile(r"आप\s+(?:अब\s+)?(?:एक\s+)?(?:AI|एआई)\s+(?:हैं|हो)", re.I),
@@ -90,11 +93,22 @@ def screen(text: str) -> Screening:
     )
 
 
-def neutralise_delimiters(text: str) -> str:
-    """Break any ``<document`` or ``</document`` sequence in user text.
+# A full-width less-than sign. Visually close to "<" so the masked source
+# still reads naturally, but it cannot close a prompt delimiter.
+SUBSTITUTE_LT = "\uff1c"
 
-    This prevents user-supplied text from closing the prompt's XML-like
-    delimiters.
+_DELIMITER_PAT = re.compile(r"<(/?)(document|question)\b", re.IGNORECASE)
+
+
+def neutralise_delimiters(text: str) -> str:
+    """Break any ``<document>`` or ``<question>`` tag inside user text.
+
+    Args:
+        text: Text that will be placed inside the prompt's delimiters.
+
+    Returns:
+        The same text with the opening angle bracket of any delimiter tag
+        replaced by :data:`SUBSTITUTE_LT`, so user text cannot close the
+        delimiter it sits in.
     """
-    text = re.sub(r"<(/?)document", r"＜\1document", text)
-    return text
+    return _DELIMITER_PAT.sub(rf"{SUBSTITUTE_LT}\1\2", text)

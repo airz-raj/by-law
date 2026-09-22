@@ -8,7 +8,6 @@ Placeholders already in the text pass through unchanged.
 from __future__ import annotations
 
 import re
-from typing import Mapping
 
 from app.core.models import Redaction
 
@@ -58,15 +57,11 @@ def _verhoeff_checksum(number: str) -> bool:
 
 _EMAIL_PAT = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
-_AADHAAR_PAT = re.compile(
-    r"\b([2-9]\d{3})[\s\-]?(\d{4})[\s\-]?(\d{4})\b"
-)
+_AADHAAR_PAT = re.compile(r"(?<![\d])([2-9]\d{3})[\s\-]?(\d{4})[\s\-]?(\d{4})(?![\d])")
 
 _PAN_PAT = re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b")
 
-_PHONE_PAT = re.compile(
-    r"(?:\+91[\s\-]?|0)?([6-9]\d{4})[\s\-]?(\d{5})\b"
-)
+_PHONE_PAT = re.compile(r"(?<![\d])(?:\+91[\s\-]?|0)?([6-9]\d{4})[\s\-]?(\d{5})(?![\d])")
 
 _ACCOUNT_KEYWORD_PAT = re.compile(
     r"(?:a/c|account\s*no|account|acct)[\s.:]*",
@@ -100,11 +95,6 @@ def redact(text: str) -> Redaction:
         tag = f"[{category}-{counts[category]}]"
         seen[value] = tag
         return tag
-
-    # Protect existing placeholders by replacing them temporarily
-    existing: list[tuple[int, int, str]] = []
-    for m in _PLACEHOLDER_PAT.finditer(text):
-        existing.append((m.start(), m.end(), m.group()))
 
     # 1. Email
     def _replace_email(m: re.Match[str]) -> str:
@@ -154,5 +144,4 @@ def redact(text: str) -> Redaction:
 
     text = _replace_accounts(text)
 
-    actual_counts: dict[str, int] = {k: v for k, v in counts.items() if v > 0}
-    return Redaction(text=text, counts=actual_counts)
+    return Redaction(text=text, counts={k: v for k, v in counts.items() if v > 0})
