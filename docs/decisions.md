@@ -6,7 +6,7 @@ build went, not afterwards.
 | Date | Decision | Rationale |
 |---|---|---|
 | 2026-09-21 | Repository hosted at `github.com/airz-raj/by-law` | Existing repository; the project is called Mohlat in code, in the interface and in this documentation |
-| 2026-09-21 | Gemini model `gemini-2.0-flash` | Newest generally available Flash-tier model in Google AI Studio at build time; set only in `app/config.py` and `.env.example` |
+| 2026-09-22 | Gemini model defaults to the `gemini-flash-latest` alias | `gemini-2.0-flash` had already been retired by the time the app first ran against the real API, and the only symptom the reader saw was "the reading service is not answering". An alias cannot be retired out from under the project. An exact id can still be pinned in `.env` for a reproducible build. Set only in `app/config.py` and `.env.example` |
 | 2026-09-21 | No CORS middleware | The page and the API share an origin, so cross-origin calls stay blocked by the browser without any configuration |
 | 2026-09-21 | No CSRF protection | No cookies and no session, so there is nothing for a forged request to ride on |
 | 2026-09-21 | System fonts only | No third-party request, so the Content-Security-Policy needs no exception; the stack includes Devanagari faces for Hindi |

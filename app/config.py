@@ -23,7 +23,12 @@ class Settings(BaseSettings):
 
     llm_backend: Literal["aistudio", "vertex"] = "aistudio"
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.0-flash"
+    # An alias that always resolves to the current Flash-tier model. A pinned
+    # id was the default until gemini-2.0-flash was retired out from under the
+    # project, which the app could only report as "the reading service is not
+    # answering". Pin an exact id here or in .env when a build needs to be
+    # reproducible.
+    gemini_model: str = "gemini-flash-latest"
     gcp_project: str | None = None
     gcp_location: str | None = None
 

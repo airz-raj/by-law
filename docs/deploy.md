@@ -38,7 +38,7 @@ gcloud run deploy mohlat \
   --allow-unauthenticated \
   --memory 512Mi --cpu 1 --concurrency 40 \
   --min-instances 0 --max-instances 3 --timeout 60 \
-  --set-env-vars "APP_ENV=prod,TRUST_PROXY=true,LLM_BACKEND=vertex,GCP_PROJECT=${PROJECT_ID},GCP_LOCATION=global,GEMINI_MODEL=gemini-2.0-flash"
+  --set-env-vars "APP_ENV=prod,TRUST_PROXY=true,LLM_BACKEND=vertex,GCP_PROJECT=${PROJECT_ID},GCP_LOCATION=global,GEMINI_MODEL=gemini-flash-latest"
 ```
 
 `GCP_LOCATION` must be a location that serves the chosen model. `global` works
@@ -69,7 +69,7 @@ gcloud run deploy mohlat \
   --memory 512Mi --cpu 1 --concurrency 40 \
   --min-instances 0 --max-instances 3 --timeout 60 \
   --set-secrets "GEMINI_API_KEY=gemini-api-key:latest" \
-  --set-env-vars "APP_ENV=prod,TRUST_PROXY=true,LLM_BACKEND=aistudio,GEMINI_MODEL=gemini-2.0-flash"
+  --set-env-vars "APP_ENV=prod,TRUST_PROXY=true,LLM_BACKEND=aistudio,GEMINI_MODEL=gemini-flash-latest"
 ```
 
 ## Why these settings
