@@ -1,103 +1,109 @@
-"""Screen documents for AI-directed instructions and urgent legal signals.
+"""Screen a document for text aimed at an AI, and for urgent legal signals.
 
-Returns signal codes, not matched text, to avoid leaking document content.
+A document is material to work on, never an instruction. Lines that try to
+instruct a reading model are surfaced to the user rather than obeyed, and
+signals that someone should not wait (a summons, a hearing, an auction)
+are surfaced too.
+
+Only signal codes leave this module. The matched text never does, so a
+screening result can be logged without leaking the document.
 """
 
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 
 from app.core.models import Screening
 
-# ---------------------------------------------------------------------------
-# AI-directed instruction patterns
-# ---------------------------------------------------------------------------
+# U+FF1C FULLWIDTH LESS-THAN SIGN. Visually close to "<", so the masked
+# source still reads naturally, but it cannot close a prompt delimiter.
+SUBSTITUTE_LT = chr(0xFF1C)
 
-_AI_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"ignore\s+(?:all|any|the)\s+(?:previous|prior|above)\s+instructions", re.I),
-    re.compile(r"disregard\s+[\w\s]*instructions", re.I),
-    re.compile(r"system\s+prompt", re.I),
-    re.compile(r"you\s+are\s+(?:now\s+)?(?:an?\s+AI|ChatGPT|Gemini|an?\s+assistant)", re.I),
-    re.compile(r"note\s+to\s+AI", re.I),
-    re.compile(r"respond\s+only\s+with", re.I),
-    re.compile(r"\bact\s+as\s+(?:a\s+|an\s+)?(?:AI|assistant|bot|model|language\s+model)\b", re.I),
-    re.compile(
-        r"(?:describe|report|state)\s+(?:this|the)\s+(?:notice|document)\s+as\s+(?:fully\s+)?valid",
-        re.I,
+_DELIMITER_PAT = re.compile(r"<(/?)(document|question)\b", re.IGNORECASE)
+
+
+@dataclass(frozen=True, slots=True)
+class Signal:
+    """One screening signal: a stable code and the phrasings that raise it."""
+
+    code: str
+    patterns: tuple[re.Pattern[str], ...]
+
+    def matches(self, text: str) -> bool:
+        """Return whether any of this signal's phrasings appear in *text*."""
+        return any(pattern.search(text) for pattern in self.patterns)
+
+
+def _signal(code: str, *sources: str) -> Signal:
+    """Build a case-insensitive signal from its patterns."""
+    return Signal(code=code, patterns=tuple(re.compile(s, re.IGNORECASE) for s in sources))
+
+
+#: Text that tries to instruct a model reading the document.
+AI_DIRECTED_SIGNALS: tuple[Signal, ...] = (
+    _signal(
+        "IGNORE_PREVIOUS",
+        r"ignore\s+(?:all\s+|any\s+|the\s+)?(?:previous|prior|above|earlier)\s+instructions",
+        r"disregard\s+(?:\w+\s+){0,3}instructions",
+        r"पिछले\s+(?:सभी\s+)?निर्देशों?\s+को\s+(?:अनदेखा|नज़रअंदाज़)",
     ),
-    # Hindi equivalents
-    re.compile(r"पिछले\s+(?:सभी\s+)?निर्देशों?\s+को\s+(?:अनदेखा|नज़रअंदाज़)\s+कर", re.I),
-    re.compile(r"आप\s+(?:अब\s+)?(?:एक\s+)?(?:AI|एआई)\s+(?:हैं|हो)", re.I),
-]
+    _signal(
+        "ADDRESSED_TO_AI",
+        r"\b(?:note|message|instruction)s?\s+(?:to|for)\s+(?:any\s+|the\s+)?"
+        r"(?:ai|a\.i\.|assistant|llm|chatbot|language\s+model|bot)\b",
+        r"\b(?:ai|artificial\s+intelligence|assistant|model|llm)s?\s+"
+        r"(?:assistant\s+)?(?:that\s+is\s+|who\s+is\s+)?reading\s+(?:this|the)\b",
+        r"\bif\s+you\s+are\s+an?\s+(?:ai|assistant|language\s+model)\b",
+        r"एआई\s+(?:सहायक|टूल)",
+    ),
+    _signal(
+        "ROLE_ASSIGNMENT",
+        r"\byou\s+are\s+(?:now\s+)?(?:an?\s+)?(?:ai|chatgpt|gemini|claude|assistant|"
+        r"language\s+model)\b",
+        r"\bact\s+as\s+(?:an?\s+)?(?:ai|assistant|bot|model|language\s+model|lawyer|judge)\b",
+        r"आप\s+(?:अब\s+)?(?:एक\s+)?(?:AI|एआई)\s+(?:हैं|हो)",
+    ),
+    _signal("SYSTEM_PROMPT", r"\bsystem\s+prompt\b", r"\bdeveloper\s+message\b"),
+    _signal(
+        "DICTATES_THE_ANSWER",
+        r"\brespond\s+only\s+with\b",
+        r"\b(?:summari[sz]e|describe|report|treat|state)\s+(?:it|this|the\s+\w+)\s+"
+        r"(?:on\s+that\s+basis|as\s+(?:being\s+)?(?:fully\s+|entirely\s+|completely\s+)?valid)",
+        r"\b(?:this|the)\s+(?:notice|document|agreement|clause)\s+is\s+"
+        r"(?:fully\s+|entirely\s+|completely\s+)?valid\s+in\s+law\b",
+        r"\bthe\s+recipient\s+has\s+no\s+defence\b",
+    ),
+)
 
-_AI_CODES: list[str] = [
-    "IGNORE_PREVIOUS",
-    "DISREGARD_INSTRUCTIONS",
-    "SYSTEM_PROMPT",
-    "ROLE_ASSIGNMENT",
-    "NOTE_TO_AI",
-    "RESPOND_ONLY_WITH",
-    "ACT_AS_AI",
-    "DESCRIBE_AS_VALID",
-    "IGNORE_PREVIOUS_HI",
-    "ROLE_ASSIGNMENT_HI",
-]
-
-# ---------------------------------------------------------------------------
-# Urgent legal patterns
-# ---------------------------------------------------------------------------
-
-_URGENT_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"\bsummons\b", re.I),
-    re.compile(r"\bwarrant\b", re.I),
-    re.compile(r"\barrest\b", re.I),
-    re.compile(r"\bFIR\b"),
-    re.compile(r"appear\s+before", re.I),
-    re.compile(r"hearing\s+on", re.I),
-    re.compile(r"police\s+station", re.I),
-    re.compile(r"possession\s+notice", re.I),
-    re.compile(r"\bauction\b", re.I),
-]
-
-_URGENT_CODES: list[str] = [
-    "SUMMONS",
-    "WARRANT",
-    "ARREST",
-    "FIR",
-    "APPEAR_BEFORE",
-    "HEARING_ON",
-    "POLICE_STATION",
-    "POSSESSION_NOTICE",
-    "AUCTION",
-]
+#: Signals that the reader should not simply wait for the deadline.
+URGENT_SIGNALS: tuple[Signal, ...] = (
+    _signal("SUMMONS", r"\bsummons(?:es)?\b"),
+    _signal("WARRANT", r"\bwarrant\b"),
+    _signal("ARREST", r"\barrest(?:ed|able)?\b"),
+    _signal("FIR", r"\bF\.?I\.?R\.?\b", r"first\s+information\s+report"),
+    _signal("APPEAR_BEFORE", r"appear\s+(?:in\s+person\s+)?before\b"),
+    _signal("HEARING", r"\bhearing\s+(?:on|is\s+fixed|date)\b", r"\bdate\s+of\s+hearing\b"),
+    _signal("POLICE_STATION", r"\bpolice\s+station\b"),
+    _signal("POSSESSION", r"\bpossession\s+notice\b", r"\btak(?:e|ing)\s+possession\b"),
+    _signal("AUCTION", r"\bauction\b", r"\bpublic\s+sale\b"),
+)
 
 
 def screen(text: str) -> Screening:
-    """Screen text for AI-directed instructions and urgent legal signals.
+    """Screen *text* and return the signal codes it raised.
 
-    Returns signal codes only, never the matched text itself.
+    Args:
+        text: The document text, already masked.
+
+    Returns:
+        The AI-directed and urgent signal codes, each at most once, in the
+        order they are declared.
     """
-    ai_directed: list[str] = []
-    for pattern, code in zip(_AI_PATTERNS, _AI_CODES, strict=True):
-        if pattern.search(text):
-            ai_directed.append(code)
-
-    urgent: list[str] = []
-    for pattern, code in zip(_URGENT_PATTERNS, _URGENT_CODES, strict=True):
-        if pattern.search(text):
-            urgent.append(code)
-
     return Screening(
-        ai_directed=tuple(ai_directed),
-        urgent=tuple(urgent),
+        ai_directed=tuple(s.code for s in AI_DIRECTED_SIGNALS if s.matches(text)),
+        urgent=tuple(s.code for s in URGENT_SIGNALS if s.matches(text)),
     )
-
-
-# A full-width less-than sign. Visually close to "<" so the masked source
-# still reads naturally, but it cannot close a prompt delimiter.
-SUBSTITUTE_LT = "\uff1c"
-
-_DELIMITER_PAT = re.compile(r"<(/?)(document|question)\b", re.IGNORECASE)
 
 
 def neutralise_delimiters(text: str) -> str:

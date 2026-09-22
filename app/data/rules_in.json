@@ -2,128 +2,157 @@
   {
     "id": "in.ni_act.s138_demand",
     "title": {
-      "en": "Cheque dishonour demand (Section 138)",
-      "hi": "चेक बाउंस का नोटिस (धारा 138)"
+      "en": "Demand notice for a dishonoured cheque",
+      "hi": "अनादरित चेक के लिए मांग नोटिस"
     },
     "clock_starts": "receipt",
     "period_days": 15,
     "what_you_must_do": {
-      "en": "You must pay the demanded amount within 15 days of receiving the notice.",
-      "hi": "आपको नोटिस मिलने के 15 दिनों के भीतर मांगी गई राशि का भुगतान करना होगा।"
+      "en": "Section 138 gives you 15 days from the day you receive this notice to pay the amount the cheque was for.",
+      "hi": "धारा 138 के अनुसार, यह नोटिस मिलने के दिन से आपके पास चेक की रकम चुकाने के लिए 15 दिन हैं।"
     },
     "what_can_happen_next": {
-      "en": "If unpaid, the payee may file a criminal complaint within one month after the 15-day period ends.",
-      "hi": "यदि भुगतान नहीं किया जाता है, तो भुगतान पाने वाला 15 दिन की अवधि समाप्त होने के एक महीने के भीतर आपराधिक शिकायत दर्ज कर सकता है।"
+      "en": "If the amount is not paid within those 15 days, the payee may file a criminal complaint. Section 142(1)(b) requires that complaint to be made within one month of the day the cause of action arises, which is the day the 15 days end without payment.",
+      "hi": "अगर इन 15 दिनों में रकम नहीं चुकाई जाती, तो चेक लेने वाला आपराधिक शिकायत दर्ज कर सकता है। धारा 142(1)(ख) के अनुसार वह शिकायत, वाद-कारण उत्पन्न होने के दिन से एक महीने के भीतर की जानी चाहिए, यानी जिस दिन 15 दिन बिना भुगतान के पूरे होते हैं।"
     },
     "your_rights": [
       {
-        "en": "You can dispute the claim if you believe the cheque was not given for a legally enforceable debt.",
-        "hi": "यदि आपको लगता है कि चेक कानूनी रूप से लागू करने योग्य ऋण के लिए नहीं दिया गया था, तो आप दावे का विरोध कर सकते हैं।"
+        "en": "Section 138 applies to a cheque given to discharge a debt or other liability that the law can enforce, in whole or in part.",
+        "hi": "धारा 138 उस चेक पर लागू होती है जो किसी ऐसे ऋण या दायित्व को, पूरा या आंशिक रूप से, चुकाने के लिए दिया गया हो जिसे कानून लागू करा सकता है।"
+      },
+      {
+        "en": "Paying within the 15 days ends the matter under this section; the section only bites if the payment is not made in time.",
+        "hi": "15 दिनों के भीतर भुगतान कर देने पर इस धारा के तहत मामला समाप्त हो जाता है; यह धारा तभी लागू होती है जब समय पर भुगतान न हो।"
       }
     ],
     "trigger_terms": [
       "section 138",
       "negotiable instruments",
       "dishonour",
-      "cheque"
+      "dishonoured",
+      "cheque",
+      "insufficient funds"
     ],
     "min_trigger_hits": 2,
     "sources": [
       {
-        "label": "Negotiable Instruments Act, 1881: s.138 proviso (c), s.142(1)(b)",
-        "url": "https://www.indiacode.nic.in/bitstream/123456789/2189/1/A1881-26.pdf"
+        "label": "Negotiable Instruments Act, 1881: s.138 proviso (b) and (c), s.142(1)(b)",
+        "url": "https://www.indiacode.nic.in/handle/123456789/2189"
       }
     ],
     "caveats": [
       {
-        "en": "Make sure the notice was sent within 30 days of the cheque bouncing.",
-        "hi": "सुनिश्चित करें कि चेक बाउंस होने के 30 दिनों के भीतर नोटिस भेजा गया था।"
+        "en": "The proviso also requires the demand to have been made in writing within 30 days of the payee receiving information from the bank that the cheque was returned unpaid. The dates on the bank memo and on this notice are worth checking.",
+        "hi": "इस परंतुक के अनुसार यह मांग, बैंक से चेक लौटने की सूचना मिलने के 30 दिनों के भीतर लिखित में की जानी चाहिए। बैंक मेमो और इस नोटिस की तारीखें जांचने योग्य हैं।"
+      },
+      {
+        "en": "The 15 days run from the day the notice reaches you, not from the date printed on it.",
+        "hi": "ये 15 दिन नोटिस आप तक पहुंचने के दिन से गिने जाते हैं, उस पर छपी तारीख से नहीं।"
       }
     ],
-    "last_reviewed": "2026-09-21"
+    "last_reviewed": "2026-09-22"
   },
   {
     "id": "in.sarfaesi.s13_2_demand",
     "title": {
-      "en": "Secured loan demand (SARFAESI)",
-      "hi": "सुरक्षित ऋण मांग (SARFAESI)"
+      "en": "Secured-loan demand notice under SARFAESI",
+      "hi": "सरफेसी के तहत बंधक ऋण की मांग का नोटिस"
     },
     "clock_starts": "notice_date",
     "period_days": 60,
     "what_you_must_do": {
-      "en": "You must discharge your liabilities to the secured creditor within 60 days from the date of the notice.",
-      "hi": "आपको नोटिस की तारीख से 60 दिनों के भीतर सुरक्षित लेनदार के प्रति अपनी देनदारियों का निर्वहन करना होगा।"
+      "en": "Section 13(2) gives you 60 days from the date of this notice to discharge your liabilities to the secured creditor in full.",
+      "hi": "धारा 13(2) के अनुसार, इस नोटिस की तारीख से आपके पास बंधक लेनदार का पूरा बकाया चुकाने के लिए 60 दिन हैं।"
     },
     "what_can_happen_next": {
-      "en": "If you fail to pay, the lender can take measures like taking possession of or selling the secured asset.",
-      "hi": "यदि आप भुगतान करने में विफल रहते हैं, तो ऋणदाता सुरक्षित संपत्ति पर कब्ज़ा करने या बेचने जैसे उपाय कर सकता है।"
+      "en": "If the dues are not discharged within 60 days, the lender may take the measures in section 13(4), which include taking possession of the secured asset or selling it.",
+      "hi": "अगर 60 दिनों में बकाया नहीं चुकाया जाता, तो ऋणदाता धारा 13(4) के उपाय अपना सकता है, जिनमें बंधक संपत्ति पर कब्जा लेना या उसे बेचना शामिल है।"
     },
     "your_rights": [
       {
-        "en": "You may make a representation or raise an objection, to which the lender must reply with reasons within 15 days.",
-        "hi": "आप कोई प्रतिवेदन दे सकते हैं या आपत्ति उठा सकते हैं, जिसका उत्तर ऋणदाता को 15 दिनों के भीतर कारणों के साथ देना होगा।"
+        "en": "Section 13(3A) lets you send the lender a representation or objection against this notice.",
+        "hi": "धारा 13(3क) आपको इस नोटिस के विरुद्ध ऋणदाता को अभ्यावेदन या आपत्ति भेजने का अधिकार देती है।"
+      },
+      {
+        "en": "If the lender does not accept your representation, it has to tell you the reasons within 15 days of receiving it.",
+        "hi": "यदि ऋणदाता आपका अभ्यावेदन स्वीकार नहीं करता, तो उसे प्राप्ति के 15 दिनों के भीतर कारण बताने होते हैं।"
       }
     ],
     "trigger_terms": [
       "sarfaesi",
+      "securitisation",
       "section 13(2)",
       "secured asset",
-      "non-performing asset",
-      "npa"
+      "secured creditor",
+      "non-performing asset"
     ],
     "min_trigger_hits": 2,
     "sources": [
       {
         "label": "SARFAESI Act, 2002: s.13(2), s.13(3A), s.13(4)",
-        "url": "https://www.indiacode.nic.in/bitstream/123456789/2006/1/a2002-54.pdf"
+        "url": "https://www.indiacode.nic.in/handle/123456789/2006"
       }
     ],
-    "caveats": [],
-    "last_reviewed": "2026-09-21"
+    "caveats": [
+      {
+        "en": "This clock runs from the date on the notice, so it may already have been running before the notice reached you.",
+        "hi": "यह अवधि नोटिस की तारीख से चलती है, इसलिए हो सकता है कि नोटिस आप तक पहुंचने से पहले ही यह शुरू हो चुकी हो।"
+      },
+      {
+        "en": "The lender's reply to a representation is not the same as a decision by a court or tribunal.",
+        "hi": "अभ्यावेदन पर ऋणदाता का उत्तर, किसी न्यायालय या अधिकरण के निर्णय के समान नहीं होता।"
+      }
+    ],
+    "last_reviewed": "2026-09-22"
   },
   {
     "id": "in.tpa.s106_termination",
     "title": {
-      "en": "Ending a month-to-month tenancy",
-      "hi": "किराएदारी समाप्त करना (महीने-दर-महीने)"
+      "en": "Notice ending a month-to-month tenancy",
+      "hi": "मासिक किरायेदारी समाप्त करने का नोटिस"
     },
     "clock_starts": "receipt",
     "period_days": 15,
     "what_you_must_do": {
-      "en": "You must vacate the premises within 15 days of receiving the notice, unless your agreement states otherwise.",
-      "hi": "आपको नोटिस मिलने के 15 दिनों के भीतर परिसर खाली करना होगा, जब तक कि आपके समझौते में कुछ और न लिखा हो।"
+      "en": "Where a lease is treated as month to month, section 106 sets 15 days' notice, and the period runs from the day you receive the notice. Your agreement or your state's rent law may set a different period.",
+      "hi": "जहां पट्टा मासिक माना जाता है, वहां धारा 106 पंद्रह दिन का नोटिस तय करती है, और यह अवधि नोटिस मिलने के दिन से चलती है। आपका अनुबंध या आपके राज्य का किराया कानून अलग अवधि तय कर सकता है।"
     },
     "what_can_happen_next": {
-      "en": "If you do not vacate, the landlord can file an eviction suit in court.",
-      "hi": "यदि आप खाली नहीं करते हैं, तो मकान मालिक अदालत में बेदखली का मुकदमा दायर कर सकता है।"
+      "en": "If the premises are not vacated, the landlord's route is to file a suit for eviction. A notice on its own does not transfer possession.",
+      "hi": "यदि परिसर खाली नहीं किया जाता, तो मकान मालिक का रास्ता बेदखली का वाद दायर करना है। नोटिस अपने आप में कब्जा हस्तांतरित नहीं करता।"
     },
     "your_rights": [
       {
-        "en": "You have the right to remain until the legal eviction process is completed through a court.",
-        "hi": "आपको तब तक रहने का अधिकार है जब तक कि अदालत के माध्यम से कानूनी बेदखली की प्रक्रिया पूरी न हो जाए।"
+        "en": "Section 106 applies only in the absence of a contract, local law or usage to the contrary, so what your agreement says is checked first.",
+        "hi": "धारा 106 तभी लागू होती है जब इसके विपरीत कोई अनुबंध, स्थानीय कानून या प्रथा न हो, इसलिए पहले यह देखा जाता है कि आपका अनुबंध क्या कहता है।"
       }
     ],
     "trigger_terms": [
       "section 106",
       "transfer of property",
       "vacate",
-      "terminate",
       "tenancy",
-      "lease"
+      "tenant",
+      "lease",
+      "landlord"
     ],
     "min_trigger_hits": 2,
     "sources": [
       {
-        "label": "Transfer of Property Act, 1882: s.106",
-        "url": "https://www.indiacode.nic.in/bitstream/123456789/2338/1/a1882-04.pdf"
+        "label": "Transfer of Property Act, 1882: s.106, as amended in 2002",
+        "url": "https://www.indiacode.nic.in/handle/123456789/2338"
       }
     ],
     "caveats": [
       {
-        "en": "State rent-control laws and your agreement can change this; many 11-month 'rent agreements' are leave-and-licence agreements, which s.106 may not govern; suggest the cross-check.",
-        "hi": "राज्य के किराया नियंत्रण कानून और आपका समझौता इसे बदल सकते हैं; कई 11-महीने के 'किराया समझौते' लीव-एंड-लाइसेंस समझौते होते हैं, जिन पर धारा 106 लागू नहीं हो सकती है; क्रॉस-चेक का सुझाव दें।"
+        "en": "State rent-control laws can set their own notice periods and their own grounds for eviction.",
+        "hi": "राज्य के किराया-नियंत्रण कानून अपनी नोटिस अवधि और बेदखली के अपने आधार तय कर सकते हैं।"
+      },
+      {
+        "en": "Many 11-month 'rent agreements' are leave-and-licence agreements, which section 106 may not govern at all. A cross-check against your agreement is worth running.",
+        "hi": "कई 11 महीने के 'रेंट एग्रीमेंट' वास्तव में लीव-एंड-लाइसेंस अनुबंध होते हैं, जिन पर धारा 106 लागू न भी हो सकती है। अपने अनुबंध से मिलान करके देखना उपयोगी है।"
       }
     ],
-    "last_reviewed": "2026-09-21"
+    "last_reviewed": "2026-09-22"
   }
 ]
