@@ -158,17 +158,17 @@ commands in [Tests and checks](#tests-and-checks).
 
 | Measure | Result |
 |---|---|
-| Python tests | 327 passing (247 unit, 80 integration) |
-| Python coverage | 97.8% overall, 98% for `app/core` (gate: 90%) |
-| Browser tests | 298 passing |
+| Python tests | 398 passing (303 unit, 95 integration) |
+| Python coverage | 97.9% overall, 98.0% for `app/core` (gate: 90%) |
+| Browser tests | 311 passing |
 | axe-core violations | 0, on both the intake and the report state |
 | `mypy --strict` | clean, 33 modules |
 | `tsc --noEmit` with `strict` and `checkJs` | clean, 16 modules |
 | `pip-audit` and `npm audit` | 0 known vulnerabilities |
-| First-visit transfer, gzipped | 30.7 KB (page, 4 stylesheets, 16 modules, one language file) |
-| Repository size | 227 KiB packed |
-| Python source | 33 modules, 3,731 lines |
-| Browser source | 16 modules, 1,943 lines |
+| First-visit transfer, gzipped | 31.7 KB (page, 4 stylesheets, 16 modules, one language file) |
+| Repository size | 254 KiB packed |
+| Python source | 33 modules, 3,967 lines |
+| Browser source | 16 modules, 1,972 lines |
 
 Not measured, because nothing is deployed yet: live request latency, cache-hit
 latency, and Lighthouse scores. `docs/deploy.md` has the commands, and these
@@ -217,6 +217,7 @@ make check     # everything CI runs: lint, format, types, security, tests
 | `GCP_PROJECT`, `GCP_LOCATION` | Vertex AI project and location | none |
 | `APP_ENV` | `dev` or `prod`; `prod` turns off the interactive API docs | `dev` |
 | `TRUST_PROXY` | Read the client address from `X-Forwarded-For` (set `true` on Cloud Run) | `false` |
+| `TRUSTED_PROXY_HOPS` | How many proxies sit in front. The client is counted in from the right of `X-Forwarded-For`, because a caller can write anything into the left of it | `1` |
 | `RATE_LIMIT_PER_MINUTE` | Requests per client per minute on the AI endpoints | `10` |
 | `CACHE_TTL_SECONDS` | How long a result can be reused for an identical request | `900` |
 
