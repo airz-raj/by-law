@@ -30,6 +30,7 @@ DISCLAIMER = (
 
 MAX_QUESTION_CHARS = 500
 MAX_DOCUMENT_LABEL_CHARS = 60
+MAX_DOCUMENT_CHARS = 60_000
 
 
 class StepSchema(BaseModel):
@@ -202,7 +203,7 @@ class QuestionDocument(BaseModel):
     """One document to answer a question from."""
 
     label: str = Field(min_length=1, max_length=MAX_DOCUMENT_LABEL_CHARS)
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=MAX_DOCUMENT_CHARS)
 
 
 class QuestionRequest(BaseModel):
@@ -245,6 +246,11 @@ class HealthReport(BaseModel):
 
 
 class RulesReport(BaseModel):
-    """The public rule cards."""
+    """The public rule cards.
 
+    This is the most advice-shaped payload the API returns, so it carries
+    the disclaimer like every other report.
+    """
+
+    disclaimer: str = DISCLAIMER
     rules: list[RuleCardSchema]

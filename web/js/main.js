@@ -15,15 +15,7 @@ import { renderReport, section } from './report.js';
 import { buildRequest, messageForError, showProblems, validate } from './intake.js';
 import { isAvailable, speak, stop } from './speech.js';
 
-/** Sections added below the generated report, in order. */
-const EXTRA_SECTIONS = [
-  ['crosscheck', 'section_crosscheck'],
-  ['ask', 'section_ask'],
-  ['legal-aid', 'section_legal_aid'],
-  ['briefing', 'section_briefing'],
-];
-
-/** @type {{report: any, receiptDate: string} | null} */
+/** @type {{report: any, receiptDate: string, language: string} | null} */
 let current = null;
 
 /** Today, as the browser sees it, for the future-date check. */
@@ -78,16 +70,30 @@ function buildContents() {
  * Show the report for a decoded notice.
  * @param {any} report
  * @param {string} receiptDate
+ * @param {{moveFocus?: boolean}} [options] moveFocus is false when the
+ *   report is only being re-rendered, so operating a control never moves
+ *   focus out from under the person using it.
  */
-function showReport(report, receiptDate) {
-  current = { report, receiptDate };
+function showReport(report, receiptDate, options = {}) {
+  const moveFocus = options.moveFocus !== false;
+  current = current ?? { report, receiptDate, language: language() };
+  current.report = report;
+  current.receiptDate = receiptDate;
   const body = need('#report-body');
 
   const noticeText = () => report.notice.text;
   const documents = () => [{ label: 'notice', text: report.notice.text }];
 
+  // The chrome follows the interface language, but the explanation itself
+  // was written by the model in the language chosen before reading. Say so
+  // rather than presenting English prose under Hindi headings.
+  const staleLanguage = current.language !== language();
+
   replace(
     body,
+    staleLanguage
+      ? el('p', { class: 'banner', role: 'note' }, t('language_changed_note'))
+      : null,
     renderReport(report, isAvailable() ? { speak } : {}),
     section('crosscheck', 'section_crosscheck', renderCrossCheck(noticeText, announce)),
     section('ask', 'section_ask', renderAsk(documents, announce)),
@@ -103,13 +109,16 @@ function showReport(report, receiptDate) {
   reportSection.hidden = false;
   buildContents();
 
-  const first = /** @type {HTMLElement | null} */ (document.querySelector('.report-section h2'));
-  if (first) {
-    first.tabIndex = -1;
-    first.focus();
+  if (moveFocus) {
+    const first = /** @type {HTMLElement | null} */ (
+      document.querySelector('.report-section h2')
+    );
+    if (first) {
+      first.tabIndex = -1;
+      first.focus();
+    }
+    announce(t('progress_done'));
   }
-  announce(t('progress_done'));
-  void EXTRA_SECTIONS;
 }
 
 /** Return to intake and forget everything held in memory. */
@@ -145,6 +154,9 @@ async function submit(event) {
 
   try {
     const report = await decodeNotice(buildRequest(values));
+    current = null;
+    await use(values.language);
+    applyTo(document);
     showReport(report, values.receiptDate);
   } catch (error) {
     const message =
@@ -188,7 +200,10 @@ async function switchLanguage(code) {
     button.setAttribute('aria-pressed', String(isCurrent));
   });
   /** @type {HTMLSelectElement} */ (need('#language-select')).value = code;
-  if (current) showReport(current.report, current.receiptDate);
+  if (current) {
+    // Re-render for the new chrome, but leave focus where the person put it.
+    showReport(current.report, current.receiptDate, { moveFocus: false });
+  }
 }
 
 /** Attach every listener. */
@@ -231,7 +246,6 @@ async function start() {
   applyTo(document);
   onSourceChange();
   wire();
-  void language;
 }
 
 void start();

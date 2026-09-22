@@ -11,20 +11,6 @@ import { renderSource } from './source-view.js';
 import { renderStamp } from './stamp.js';
 import { stepSentences } from './steps.js';
 
-/** The sections that always appear, in order, with their heading keys. */
-export const SECTIONS = [
-  ['deadline', 'section_deadline'],
-  ['summary', 'section_summary'],
-  ['demands', 'section_demands'],
-  ['dates', 'section_dates'],
-  ['law', 'section_law'],
-  ['options', 'section_options'],
-  ['crosscheck', 'section_crosscheck'],
-  ['ask', 'section_ask'],
-  ['legal-aid', 'section_legal_aid'],
-  ['briefing', 'section_briefing'],
-];
-
 /**
  * Wrap content in a titled section.
  * @param {string} id

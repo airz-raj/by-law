@@ -15,6 +15,10 @@ class Settings(BaseSettings):
 
     app_env: Literal["dev", "prod"] = "dev"
     trust_proxy: bool = False
+    # How many proxies sit in front of the app. The client address is that
+    # many entries in from the right of X-Forwarded-For, because a caller
+    # can write anything into the left of it.
+    trusted_proxy_hops: int = 1
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     llm_backend: Literal["aistudio", "vertex"] = "aistudio"

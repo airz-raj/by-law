@@ -198,5 +198,10 @@
   "redaction_AADHAAR": "Aadhaar numbers",
   "redaction_PAN": "PAN numbers",
   "redaction_PHONE": "phone numbers",
-  "redaction_ACCOUNT": "bank account numbers"
+  "redaction_ACCOUNT": "bank account numbers",
+  "crosscheck_file_label": "Or upload the agreement as a file",
+  "error_network": "We could not reach the server. Check your connection and try again.",
+  "briefing_notice_unmatched": "Not matched to a rule in our rulebook",
+  "report_heading": "Your report",
+  "language_changed_note": "The interface is now in this language. The explanation itself was written in the language you chose before reading, so read it again to have it rewritten."
 }

@@ -42,8 +42,27 @@ describe('the calendar export', () => {
   });
 
   it('escapes commas, semicolons and newlines in text', () => {
-    expect(escapeText('a, b; c\nd')).toBe('a\\, b\; c\\nd');
-    expect(escapeText('back\\slash')).toBe('back\\\\slash');
+    // Written with String.raw so the expectation cannot carry the same
+    // broken escape the implementation once had: '\;' is not an escape
+    // sequence in JavaScript, it is just ';'.
+    expect(escapeText('a, b; c\nd')).toBe(String.raw`a\, b\; c\n` + 'd');
+    expect(escapeText('back\\slash')).toBe(String.raw`back\\slash`);
+  });
+
+  it('escaping a semicolon actually changes the string', () => {
+    expect(escapeText('a;b')).not.toBe('a;b');
+    expect(escapeText('a;b')).toBe(String.raw`a\;b`);
+  });
+
+  it('escapes every semicolon in a property value', () => {
+    const risky = buildCalendar({
+      date: '2026-10-01',
+      title: 'Pay; reply; or dispute',
+      description: 'x',
+      stamp: '20260922T000000Z',
+    });
+    const summary = risky.split('\r\n').find((line) => line.startsWith('SUMMARY:'));
+    expect(summary).toBe(String.raw`SUMMARY:Pay\; reply\; or dispute`);
   });
 
   it('escapes the description it was given', () => {

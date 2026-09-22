@@ -57,11 +57,14 @@ def _verhoeff_checksum(number: str) -> bool:
 
 _EMAIL_PAT = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
-_AADHAAR_PAT = re.compile(r"(?<![\d])([2-9]\d{3})[\s\-]?(\d{4})[\s\-]?(\d{4})(?![\d])")
+_AADHAAR_PAT = re.compile(r"(?<![\d])([2-9]\d{3})[\s\-.]{0,2}(\d{4})[\s\-.]{0,2}(\d{4})(?![\d])")
 
-_PAN_PAT = re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b")
+_PAN_PAT = re.compile(r"\b[A-Za-z]{5}[0-9]{4}[A-Za-z]\b")
 
-_PHONE_PAT = re.compile(r"(?<![\d])(?:\+91[\s\-]?|0)?([6-9]\d{4})[\s\-]?(\d{5})(?![\d])")
+# Ten digits beginning 6-9, however they are grouped: a separator may sit
+# between any two of them. The lookarounds stop a longer digit run matching
+# its own tail.
+_PHONE_PAT = re.compile(r"(?<![\d])(?:\+91[\s\-.]?|0)?([6-9](?:[\s\-.]?\d){9})(?![\d])")
 
 _ACCOUNT_KEYWORD_PAT = re.compile(
     r"(?:a/c|account\s*no|account|acct)[\s.:]*",
@@ -113,13 +116,13 @@ def redact(text: str) -> Redaction:
 
     # 3. PAN
     def _replace_pan(m: re.Match[str]) -> str:
-        return _placeholder("PAN", m.group())
+        return _placeholder("PAN", m.group().upper())
 
     text = _PAN_PAT.sub(_replace_pan, text)
 
     # 4. Phone
     def _replace_phone(m: re.Match[str]) -> str:
-        digits = m.group(1) + m.group(2)
+        digits = re.sub(r"\D", "", m.group(1))
         return _placeholder("PHONE", digits)
 
     text = _PHONE_PAT.sub(_replace_phone, text)

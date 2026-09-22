@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.security.headers import CONTENT_SECURITY_POLICY, SECURITY_HEADERS
-from app.security.rate_limit import client_key
-from tests.conftest import build_client
+from app.security.rate_limit import MAX_TRACKED_CLIENTS, RateLimiter, client_key
+from tests.conftest import build_client, make_settings
 from tests.fakes import FakeLLM, UnavailableLLM, load_fixture
 
 DECODE = "/api/v1/notices/decode"
@@ -105,14 +105,65 @@ def test_reads_are_not_rate_limited(settings: Settings, llm: FakeLLM) -> None:
             assert client.get(HEALTH).status_code == 200
 
 
-def test_the_forwarded_client_is_ignored_unless_the_proxy_is_trusted() -> None:
+def fake_request(forwarded: str | None) -> Any:
+    """A stand-in carrying just what client_key reads."""
+
     class Request:
-        headers: ClassVar[dict[str, str]] = {"x-forwarded-for": "203.0.113.9, 10.0.0.1"}
+        headers: ClassVar[dict[str, str]] = (
+            {} if forwarded is None else {"x-forwarded-for": forwarded}
+        )
         client = type("Client", (), {"host": "127.0.0.1"})()
 
-    request = Request()
-    assert client_key(request, trust_proxy=True) == "203.0.113.9"  # type: ignore[arg-type]
-    assert client_key(request, trust_proxy=False) == "127.0.0.1"  # type: ignore[arg-type]
+    return Request()
+
+
+def test_the_forwarded_client_is_ignored_unless_the_proxy_is_trusted() -> None:
+    request = fake_request("203.0.113.9")
+    assert client_key(request, trust_proxy=True) == "203.0.113.9"
+    assert client_key(request, trust_proxy=False) == "127.0.0.1"
+
+
+def test_a_client_supplied_forwarded_entry_cannot_impersonate_another_client() -> None:
+    """The proxy appends, so only the rightmost entries can be believed.
+
+    Trusting the leftmost entry would let one caller present a fresh
+    address per request and spend the whole instance's model budget.
+    """
+    spoofed = fake_request("198.51.100.1, 203.0.113.9")
+    assert client_key(spoofed, trust_proxy=True, proxy_hops=1) == "203.0.113.9"
+
+
+def test_rotating_a_spoofed_entry_does_not_escape_the_limit() -> None:
+    limiter = RateLimiter(make_settings(rate_limit_per_minute=3))
+    refused = 0
+    for attempt in range(10):
+        request = fake_request(f"198.51.100.{attempt}, 203.0.113.9")
+        key = client_key(request, trust_proxy=True, proxy_hops=1)
+        if limiter.take(key) is not None:
+            refused += 1
+    assert refused == 7
+
+
+def test_two_proxies_in_front_means_counting_two_in() -> None:
+    request = fake_request("198.51.100.1, 203.0.113.9, 10.0.0.1")
+    assert client_key(request, trust_proxy=True, proxy_hops=2) == "203.0.113.9"
+
+
+def test_a_header_too_short_to_trust_falls_back_to_the_socket() -> None:
+    request = fake_request("203.0.113.9")
+    assert client_key(request, trust_proxy=True, proxy_hops=2) == "127.0.0.1"
+
+
+def test_an_absent_header_falls_back_to_the_socket() -> None:
+    assert client_key(fake_request(None), trust_proxy=True) == "127.0.0.1"
+
+
+def test_the_tracked_clients_are_capped() -> None:
+    """A flood of distinct keys must not grow the bucket map without bound."""
+    limiter = RateLimiter(make_settings(rate_limit_per_minute=10))
+    for n in range(MAX_TRACKED_CLIENTS + 500):
+        limiter.take(f"client-{n}")
+    assert len(limiter) <= MAX_TRACKED_CLIENTS
 
 
 def test_the_interactive_docs_are_off_in_production(settings: Settings, llm: FakeLLM) -> None:

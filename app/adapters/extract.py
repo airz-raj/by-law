@@ -1,76 +1,143 @@
-"""Extract plain text from uploaded files."""
+"""Validate an upload and turn it into text.
+
+The file type is decided by the bytes, not the name. PDF support is
+imported only when a PDF actually arrives, so the common path never pays
+for it. Extraction stops as soon as the text exceeds the document limit,
+so a small file that decompresses to a huge one is refused rather than
+expanded in full first.
+"""
 
 from __future__ import annotations
 
 import io
 from typing import BinaryIO
 
-import pypdf
-
 from app.config import Settings
 from app.errors import InputRejected
 
+PDF_MAGIC = b"%PDF-"
+NUL = b"\x00"
 
-def extract_text(file_obj: BinaryIO, settings: Settings) -> str:
-    """Read a file object and extract UTF-8 text or PDF content.
+CODE_FILE_TOO_LARGE = "FILE_TOO_LARGE"
+CODE_ENCRYPTED_PDF = "ENCRYPTED_PDF"
+CODE_TOO_MANY_PAGES = "TOO_MANY_PAGES"
+CODE_INVALID_PDF = "INVALID_PDF"
+CODE_SCANNED_PDF = "SCANNED_PDF"
+CODE_UNSUPPORTED_TYPE = "UNSUPPORTED_TYPE"
+CODE_TEXT_TOO_SHORT = "TEXT_TOO_SHORT"
+CODE_DOCUMENT_TOO_LONG = "DOCUMENT_TOO_LONG"
 
-    Enforces limits on bytes, pages, and extracted characters.
-    Rejects encrypted PDFs and files that appear to be scanned PDFs.
+
+def _read_within_limit(data: BinaryIO, settings: Settings) -> bytes:
+    """Read at most one byte more than the limit, so oversize is detectable.
+
+    Raises:
+        InputRejected: The upload is larger than the limit.
     """
-    # 1. Read at most max_upload_bytes + 1
-    raw = file_obj.read(settings.max_upload_bytes + 1)
+    raw = data.read(settings.max_upload_bytes + 1)
     if len(raw) > settings.max_upload_bytes:
-        raise InputRejected("FILE_TOO_LARGE", "The file exceeds the upload limit.")
+        raise InputRejected(
+            CODE_FILE_TOO_LARGE,
+            f"That file is larger than the {settings.max_upload_bytes // 1_000_000} MB limit.",
+        )
+    return raw
 
-    # 2. PDF detection
-    is_pdf = raw.startswith(b"%PDF-")
 
-    text = ""
-    if is_pdf:
-        try:
-            reader = pypdf.PdfReader(io.BytesIO(raw))
-            if reader.is_encrypted:
-                raise InputRejected("ENCRYPTED_PDF", "Cannot read a password-protected PDF.")
+def _extract_pdf(raw: bytes, settings: Settings) -> str:
+    """Extract text from PDF bytes, stopping at the document limit.
 
-            num_pages = len(reader.pages)
-            if num_pages > settings.max_pdf_pages:
-                raise InputRejected("TOO_MANY_PAGES", "The PDF has too many pages.")
+    Raises:
+        InputRejected: The PDF is encrypted, unreadable, too long, or holds
+            no selectable text.
+    """
+    import pypdf  # Imported here so a text upload never loads the PDF stack.
 
-            pages_text = []
-            for page in reader.pages:
-                pt = page.extract_text()
-                if pt:
-                    pages_text.append(pt)
-            text = "\n".join(pages_text)
-        except pypdf.errors.PyPdfError as e:
-            raise InputRejected("INVALID_PDF", "The file is a corrupted or unreadable PDF.") from e
-
-        # If it's a PDF but text is too short, assume it's scanned
-        if len(text.strip()) < settings.min_notice_chars:
-            raise InputRejected("SCANNED_PDF", "The PDF appears to be an image. Please use text.")
-
-    else:
-        # 3. Plain text decoding
-        if b"\x00" in raw:
-            raise InputRejected("UNSUPPORTED_TYPE", "Binary files are not supported.")
-
-        try:
-            # decode as utf-8, strip BOM if present
-            decoded = raw.decode("utf-8-sig")
-            text = decoded
-        except UnicodeDecodeError as e:
+    try:
+        reader = pypdf.PdfReader(io.BytesIO(raw))
+        if reader.is_encrypted:
             raise InputRejected(
-                "UNSUPPORTED_TYPE", "Only UTF-8 text and readable PDFs are supported."
-            ) from e
-
-        if len(text.strip()) < settings.min_notice_chars:
+                CODE_ENCRYPTED_PDF,
+                "That PDF is password-protected, so it cannot be read. Paste the text instead.",
+            )
+        if len(reader.pages) > settings.max_pdf_pages:
             raise InputRejected(
-                "TEXT_TOO_SHORT",
-                "That is too short to be a notice. Paste the whole document.",
+                CODE_TOO_MANY_PAGES,
+                f"That PDF has more than {settings.max_pdf_pages} pages.",
             )
 
-    # 4. Enforce max document chars limit
-    if len(text) > settings.max_document_chars:
-        raise InputRejected("DOCUMENT_TOO_LONG", "The document contains too much text.")
+        pages: list[str] = []
+        total = 0
+        for page in reader.pages:
+            text = page.extract_text() or ""
+            total += len(text)
+            pages.append(text)
+            if total > settings.max_document_chars:
+                # Stop here rather than expanding the rest of the file.
+                raise InputRejected(
+                    CODE_DOCUMENT_TOO_LONG,
+                    "That document holds more text than Mohlat reads in one go.",
+                )
+    except pypdf.errors.PyPdfError as error:
+        raise InputRejected(
+            CODE_INVALID_PDF, "That PDF could not be opened. It may be damaged."
+        ) from error
 
+    joined = "\n".join(pages)
+    if len(joined.strip()) < settings.min_notice_chars:
+        raise InputRejected(
+            CODE_SCANNED_PDF,
+            "That PDF looks like a scan, so there is no text to read. Paste the text instead.",
+        )
+    return joined
+
+
+def _decode_text(raw: bytes, settings: Settings) -> str:
+    """Decode plain-text bytes as UTF-8.
+
+    Raises:
+        InputRejected: The bytes are binary, not UTF-8, or too short.
+    """
+    if NUL in raw:
+        raise InputRejected(
+            CODE_UNSUPPORTED_TYPE,
+            "That looks like a binary file. Send plain text or a PDF with selectable text.",
+        )
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError as error:
+        raise InputRejected(
+            CODE_UNSUPPORTED_TYPE,
+            "That file is not plain text or a readable PDF.",
+        ) from error
+
+    if len(text.strip()) < settings.min_notice_chars:
+        raise InputRejected(
+            CODE_TEXT_TOO_SHORT,
+            "That is too short to be a notice. Paste the whole document.",
+        )
+    return text
+
+
+def extract_text(data: BinaryIO, settings: Settings) -> str:
+    """Return the text of an upload, or say why it cannot be read.
+
+    Args:
+        data: The uploaded bytes.
+        settings: Supplies every limit applied here.
+
+    Returns:
+        The extracted text.
+
+    Raises:
+        InputRejected: The upload was too large, the wrong type, encrypted,
+            scanned, too long, or too short to be a notice.
+    """
+    raw = _read_within_limit(data, settings)
+    text = _extract_pdf(raw, settings) if raw.startswith(PDF_MAGIC) else _decode_text(raw, settings)
+
+    if len(text) > settings.max_document_chars:
+        raise InputRejected(
+            CODE_DOCUMENT_TOO_LONG,
+            "That document holds more text than Mohlat reads in one go.",
+        )
     return text

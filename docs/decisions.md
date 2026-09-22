@@ -52,3 +52,31 @@ than translated word for word. These are worth a native reader's eye:
   idiom yet.
 - `clause_UNDESERVED_WANT` — "अनुचित अभाव" is the phrase used for the Section 12
   category; the Act's own Hindi text may word it differently.
+
+## Changed after auditing the finished build
+
+A fresh-eyes audit was run over the completed repository, checking every
+claim in the README against the code and probing the defences. It found
+real defects; these are what changed.
+
+| Finding | Change |
+|---|---|
+| The rate limiter read the **leftmost** `X-Forwarded-For` entry, which a caller writes. Rotating a fake address walked straight past the limit, and a test asserted that behaviour as correct | The client is counted in from the right by `trusted_proxy_hops`, because each proxy appends and only the rightmost entries are written by infrastructure we control. The test that certified the bug was replaced by one that rotates a spoofed entry and expects it to be refused |
+| Bucket storage was an unbounded dict, so the same flood was also a slow memory leak | Buckets are an `OrderedDict` capped at 4096 least-recently-seen clients |
+| The model adapter caught only `OSError` and `RuntimeError`. The SDK raises httpx errors, which are neither, so a real outage surfaced as an unhandled 500 rather than the 503 the front end knows how to explain | Any exception from the SDK call becomes `LLMUnavailable`. The test that "covered" this raised an `OSError` the SDK never produces |
+| A 500 went out with no Content-Security-Policy, no request id and no `Cache-Control`, because Starlette's server-error handler sits outside the middleware stack | The headers are attached where the problem response is built, so they reach every answer including that one |
+| The README said PDF parsing loaded only when a PDF arrived; `import pypdf` was at module level | The import moved inside the PDF branch, and the claim is now true |
+| A 101 KB PDF whose streams expanded to 33 MB took 27 seconds and ~100 MB before the length check ran | Extraction stops as soon as the accumulated text passes the limit |
+| A `Transfer-Encoding: chunked` body walked past the size guard, which read only `Content-Length` | The guard is now pure ASGI and counts the bytes as they arrive |
+| An over-large form part produced Starlette's own JSON error, outside the problem contract, naming an internal limit | Mapped to a problem response like every other failure |
+| The PAN pattern was case-sensitive, so a lowercase PAN reached the model. Aadhaar and phone numbers leaked in several common groupings | Patterns widened; the leaking forms are now parametrised tests |
+| Screening caught 1 of 11 realistic injection attempts, and the delimiter neutraliser was bypassable with a zero-width space or a soft hyphen | Signals were widened to 11 of 11 with no false positives on the ordinary legal language tested, and invisible characters are stripped before matching. The README no longer presents this as more than a pattern list |
+| `escapeText` in the calendar export used `'\;'`, which is not an escape in JavaScript, so semicolons were never escaped. The test's expectation carried the same broken escape, so it passed either way | Fixed, and the test rewritten with `String.raw` plus an assertion that escaping changes the string at all |
+| The agreement file input had no label — an axe violation of critical impact. The accessibility tests never rendered the four interactive sections, so they could not see it | Labelled, and the axe tests now render the full report state and assert on `incomplete` as well as `violations` |
+| `aria-labelledby="report-heading"` pointed at an element that did not exist | The heading exists; a test now checks every `aria-labelledby` and `aria-describedby` on the page resolves |
+| The briefing sheet read `report.notice_label`, which the API never returns, so the notice type showed as a dash whenever no rule matched | Reads the classification, with a translated fallback |
+| Switching language moved focus to the top of the report, and left model-written prose in the previous language with no explanation | Focus stays where it is, and a note says the explanation was written in the language chosen before reading |
+| A network failure rendered the literal string `network_error` | Mapped to a translated sentence |
+| `notice_text` and question documents had no length cap, so `max_document_chars` never applied to them | Both capped at the document limit |
+| `isSafeHref` accepted `//evil.com` as same-origin | Protocol-relative URLs are refused |
+| Dead code: an unused `SECTIONS` export, an unused `EXTRA_SECTIONS` kept alive by `void`, a pointless re-export, and an unused placeholder pattern | Removed |

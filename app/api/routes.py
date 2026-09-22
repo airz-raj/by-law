@@ -14,6 +14,7 @@ from fastapi import APIRouter, File, Form, Request, UploadFile
 
 from app.api.dependencies import ServicesDep, TodayDep, extract_document
 from app.api.schemas import (
+    MAX_DOCUMENT_CHARS,
     AnswerReport,
     CrossCheckReport,
     DecodeReport,
@@ -137,7 +138,7 @@ async def decode(
 async def cross_check(
     request: Request,
     services: ServicesDep,
-    notice_text: Annotated[str, Form(min_length=1)],
+    notice_text: Annotated[str, Form(min_length=1, max_length=MAX_DOCUMENT_CHARS)],
     language: LanguageForm = "en",
     agreement_text: Annotated[str | None, Form()] = None,
     file: Annotated[UploadFile | None, File()] = None,

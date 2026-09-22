@@ -149,7 +149,10 @@ class GeminiLLM:
             raise LLMUnavailable(f"the model did not answer {task} in time") from error
         except APIError as error:
             raise LLMUnavailable(f"the model backend refused {task}") from error
-        except (OSError, RuntimeError) as error:
+        except Exception as error:
+            # The SDK raises httpx errors, which inherit from neither OSError
+            # nor RuntimeError, so narrowing here would let a real outage
+            # surface as an unhandled 500 instead of a 503.
             raise LLMUnavailable(f"the model backend was unreachable for {task}") from error
 
         self._log_usage(task=task, attempt=attempt, started=started, response=response)

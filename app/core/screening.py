@@ -20,7 +20,13 @@ from app.core.models import Screening
 # source still reads naturally, but it cannot close a prompt delimiter.
 SUBSTITUTE_LT = chr(0xFF1C)
 
-_DELIMITER_PAT = re.compile(r"<(/?)(document|question)\b", re.IGNORECASE)
+# Characters that render as nothing and can be slipped between the letters
+# of a tag to sneak it past a naive pattern.
+_INVISIBLE = re.compile(r"[\u00ad\u200b-\u200f\u2060\ufeff]")
+
+# A delimiter tag, tolerating whitespace and invisible characters the way a
+# model reading the text would.
+_DELIMITER_PAT = re.compile(r"<\s*(/?)\s*(document|question)", re.IGNORECASE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,35 +42,53 @@ class Signal:
 
 
 def _signal(code: str, *sources: str) -> Signal:
-    """Build a case-insensitive signal from its patterns."""
-    return Signal(code=code, patterns=tuple(re.compile(s, re.IGNORECASE) for s in sources))
+    """Build a signal whose patterns ignore case and match line by line."""
+    return Signal(
+        code=code,
+        patterns=tuple(re.compile(s, re.IGNORECASE | re.MULTILINE) for s in sources),
+    )
 
 
 #: Text that tries to instruct a model reading the document.
 AI_DIRECTED_SIGNALS: tuple[Signal, ...] = (
     _signal(
         "IGNORE_PREVIOUS",
-        r"ignore\s+(?:all\s+|any\s+|the\s+)?(?:previous|prior|above|earlier)\s+instructions",
-        r"disregard\s+(?:\w+\s+){0,3}instructions",
-        r"पिछले\s+(?:सभी\s+)?निर्देशों?\s+को\s+(?:अनदेखा|नज़रअंदाज़)",
+        r"\b(?:ignore|disregard|forget|override|skip)\s+(?:\w+\s+){0,4}"
+        r"(?:instructions?|directions?|guidelines?|rules?|prompt|everything\s+above)",
+        r"\bforget\s+everything\b",
+        r"\bnew\s+task\s*:",
+        r"पिछले\s+(?:सभी\s+)?(?:निर्देशों?|निर्देश)\s+को\s+(?:अनदेखा|नज़रअंदाज़)",
     ),
     _signal(
         "ADDRESSED_TO_AI",
-        r"\b(?:note|message|instruction)s?\s+(?:to|for)\s+(?:any\s+|the\s+)?"
-        r"(?:ai|a\.i\.|assistant|llm|chatbot|language\s+model|bot)\b",
-        r"\b(?:ai|artificial\s+intelligence|assistant|model|llm)s?\s+"
-        r"(?:assistant\s+)?(?:that\s+is\s+|who\s+is\s+)?reading\s+(?:this|the)\b",
-        r"\bif\s+you\s+are\s+an?\s+(?:ai|assistant|language\s+model)\b",
-        r"एआई\s+(?:सहायक|टूल)",
+        r"\b(?:note|message|instruction|important)s?\s+(?:to|for)\s+"
+        r"(?:any\s+|the\s+|a\s+)?(?:reviewing\s+|processing\s+)?"
+        r"(?:ai|a\.i\.|assistant|llm|chatbot|language\s+model|bot|model)\b",
+        r"\b(?:ai|artificial\s+intelligence|assistant|model|llm)s?\b[^.\n]{0,40}"
+        r"\b(?:reading|processing|reviewing|summaris|summariz)",
+        r"\bif\s+you\s+are\s+an?\s+(?:ai|assistant|language\s+model|bot)\b",
+        r"\b(?:assistant|chatgpt|gemini|claude|copilot)\s*[,:]",
+        r"\bfor\s+any\s+language\s+model\b",
+        r"एआई\s+(?:सहायक|टूल|मॉडल)",
     ),
     _signal(
         "ROLE_ASSIGNMENT",
         r"\byou\s+are\s+(?:now\s+)?(?:an?\s+)?(?:ai|chatgpt|gemini|claude|assistant|"
-        r"language\s+model)\b",
-        r"\bact\s+as\s+(?:an?\s+)?(?:ai|assistant|bot|model|language\s+model|lawyer|judge)\b",
+        r"language\s+model|legal\s+advisor|lawyer|judge)\b",
+        r"\b(?:act|behave|respond)\s+as\s+(?:an?\s+)?"
+        r"(?:ai|assistant|bot|model|language\s+model|lawyer|judge|advisor)\b",
+        r"\bpretend\s+(?:to\s+be|you\s+are)\b",
         r"आप\s+(?:अब\s+)?(?:एक\s+)?(?:AI|एआई)\s+(?:हैं|हो)",
     ),
-    _signal("SYSTEM_PROMPT", r"\bsystem\s+prompt\b", r"\bdeveloper\s+message\b"),
+    _signal(
+        "SYSTEM_PROMPT",
+        r"\bsystem\s+prompt\b",
+        r"\bdeveloper\s+message\b",
+        r"^\s*(?:system|assistant|user)\s*:",
+        r"<<\s*sys\s*>>",
+        r"#{2,}\s*instruction",
+        r"\byour\s+guidelines\b",
+    ),
     _signal(
         "DICTATES_THE_ANSWER",
         r"\brespond\s+only\s+with\b",
@@ -73,6 +97,10 @@ AI_DIRECTED_SIGNALS: tuple[Signal, ...] = (
         r"\b(?:this|the)\s+(?:notice|document|agreement|clause)\s+is\s+"
         r"(?:fully\s+|entirely\s+|completely\s+)?valid\s+in\s+law\b",
         r"\bthe\s+recipient\s+has\s+no\s+defence\b",
+        r"\b(?:mark|treat|report)\s+(?:every|all|each)\s+\w+\s+"
+        r"(?:as\s+)?(?:consistent|valid|correct|paid)\b",
+        r"\boutput\s+(?:only|nothing|an?\s+empty)\b",
+        r"\breply\s+with\s+(?:an?\s+)?empty\b",
     ),
 )
 
@@ -100,9 +128,10 @@ def screen(text: str) -> Screening:
         The AI-directed and urgent signal codes, each at most once, in the
         order they are declared.
     """
+    normalised = _INVISIBLE.sub("", text)
     return Screening(
-        ai_directed=tuple(s.code for s in AI_DIRECTED_SIGNALS if s.matches(text)),
-        urgent=tuple(s.code for s in URGENT_SIGNALS if s.matches(text)),
+        ai_directed=tuple(s.code for s in AI_DIRECTED_SIGNALS if s.matches(normalised)),
+        urgent=tuple(s.code for s in URGENT_SIGNALS if s.matches(normalised)),
     )
 
 
@@ -112,9 +141,13 @@ def neutralise_delimiters(text: str) -> str:
     Args:
         text: Text that will be placed inside the prompt's delimiters.
 
+    Invisible characters are removed first, so a tag cannot be smuggled
+    through by splitting it with a zero-width space or a soft hyphen.
+
     Returns:
         The same text with the opening angle bracket of any delimiter tag
         replaced by :data:`SUBSTITUTE_LT`, so user text cannot close the
         delimiter it sits in.
     """
-    return _DELIMITER_PAT.sub(rf"{SUBSTITUTE_LT}\1\2", text)
+    cleaned = _INVISIBLE.sub("", text)
+    return _DELIMITER_PAT.sub(rf"{SUBSTITUTE_LT}\1\2", cleaned)

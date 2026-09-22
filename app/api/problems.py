@@ -14,6 +14,7 @@ from typing import Final, cast
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from starlette.formparsers import MultiPartException
 from starlette.responses import JSONResponse
 
 from app.errors import (
@@ -24,6 +25,8 @@ from app.errors import (
     RateLimitExceeded,
 )
 from app.observability import get_logger
+from app.security.headers import NO_STORE, SECURITY_HEADERS
+from app.security.request_id import HEADER_NAME as REQUEST_ID_HEADER
 from app.security.request_id import request_id_of
 
 Handler = Callable[[Request, Exception], Awaitable[JSONResponse]]
@@ -40,6 +43,9 @@ LLM_INVALID_DETAIL: Final = (
     "We could not read this document reliably. Try pasting the text instead."
 )
 VALIDATION_DETAIL: Final = "Check the highlighted fields and try again."
+MULTIPART_DETAIL: Final = (
+    "That document is larger than Mohlat reads in one go. Send a shorter extract."
+)
 
 #: Which HTTP status each input-rejection code answers with.
 _INPUT_STATUS: Final[dict[str, int]] = {
@@ -73,15 +79,28 @@ def problem(
     detail: str,
     headers: dict[str, str] | None = None,
 ) -> JSONResponse:
-    """Build one problem+json response."""
+    """Build one problem+json response.
+
+    The security headers are attached here rather than left to the
+    middleware. Starlette's server-error handler sits outside the
+    middleware stack, so a 500 built there would otherwise go out with no
+    policy, no request id and no Cache-Control.
+    """
+    request_id = request_id_of(request)
     body = {
         "type": problem_type(code),
         "title": HTTPStatus(status).phrase,
         "status": status,
         "detail": detail,
-        "request_id": request_id_of(request),
+        "request_id": request_id,
     }
-    return JSONResponse(body, status_code=status, media_type=CONTENT_TYPE, headers=headers or {})
+    merged = {
+        **SECURITY_HEADERS,
+        "Cache-Control": NO_STORE,
+        REQUEST_ID_HEADER: request_id,
+        **(headers or {}),
+    }
+    return JSONResponse(body, status_code=status, media_type=CONTENT_TYPE, headers=merged)
 
 
 def response_for(request: Request, error: MohlatError) -> JSONResponse:
@@ -169,6 +188,21 @@ async def _validation_failed(request: Request, exc: Exception) -> JSONResponse:
     )
 
 
+async def _multipart_rejected(request: Request, _exc: MultiPartException) -> JSONResponse:
+    """Answer Starlette's own multipart failure in the problem contract.
+
+    Without this the framework answers with its own JSON shape, which
+    carries no problem type and names an internal limit.
+    """
+    logger.info("multipart rejected", extra={"request_id": request_id_of(request)})
+    return problem(
+        request=request,
+        code="DOCUMENT_TOO_LONG",
+        status=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+        detail=MULTIPART_DETAIL,
+    )
+
+
 async def _unexpected(request: Request, _exc: Exception) -> JSONResponse:
     """Answer anything unforeseen with 500 and nothing about the cause."""
     logger.exception("unhandled error", extra={"request_id": request_id_of(request)})
@@ -188,6 +222,7 @@ _HANDLERS: Final[tuple[tuple[type[Exception], Handler], ...]] = (
     (LLMUnavailable, cast("Handler", _llm_unavailable)),
     (LLMOutputInvalid, cast("Handler", _llm_output_invalid)),
     (RequestValidationError, cast("Handler", _validation_failed)),
+    (MultiPartException, cast("Handler", _multipart_rejected)),
     (Exception, cast("Handler", _unexpected)),
 )
 

@@ -69,10 +69,7 @@ def create_app(settings: Settings | None = None, llm: LLMPort | None = None) -> 
     setattr(app.state, SERVICES_STATE_KEY, services)
 
     # Added last runs first, so this list reads innermost to outermost.
-    app.add_middleware(
-        BaseHTTPMiddleware,
-        dispatch=BodySizeLimitMiddleware(app, resolved, problems.response_for).__call__,
-    )
+    app.add_middleware(BodySizeLimitMiddleware, settings=resolved, reject=problems.response_for)
     app.add_middleware(
         BaseHTTPMiddleware,
         dispatch=RateLimitMiddleware(

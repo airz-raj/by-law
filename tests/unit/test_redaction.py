@@ -91,9 +91,10 @@ def test_pan_is_masked() -> None:
     assert result.counts["PAN"] == 1
 
 
-def test_a_lowercase_pan_shaped_word_is_left_alone() -> None:
-    result = redact("The word abcde1234f is not a PAN.")
-    assert "abcde1234f" in result.text
+@pytest.mark.parametrize("word", ["ABCD1234F", "ABCDE1234", "ABCDEF1234F", "ABCDE12345"])
+def test_a_word_that_is_not_pan_shaped_is_left_alone(word: str) -> None:
+    """Five letters, four digits, one letter. Anything else is not a PAN."""
+    assert word in redact(f"Reference {word} in our file.").text
 
 
 @pytest.mark.parametrize(
@@ -153,3 +154,66 @@ def test_names_and_addresses_are_not_masked() -> None:
 def test_counts_only_list_categories_that_were_found() -> None:
     result = redact("PAN ABCDE1234F and nothing else.")
     assert result.counts == {"PAN": 1}
+
+
+# --- cases an audit of the finished build found leaking ---------------------
+
+
+@pytest.mark.parametrize("written", ["ABCDE1234F", "abcde1234f", "Abcde1234f", "AbCdE1234f"])
+def test_a_pan_is_masked_whatever_its_case(written: str) -> None:
+    """PDF extraction and pasted text routinely change case."""
+    result = redact(f"PAN {written} of the drawer.")
+    assert written not in result.text
+    assert "[PAN-1]" in result.text
+
+
+def test_the_same_pan_in_two_cases_is_one_value() -> None:
+    result = redact("PAN ABCDE1234F, also written abcde1234f.")
+    assert result.counts["PAN"] == 1
+
+
+@pytest.mark.parametrize("separator", [" ", "-", ".", "  "])
+def test_an_aadhaar_is_masked_whatever_separates_its_groups(separator: str) -> None:
+    grouped = separator.join((VALID_AADHAAR[0:4], VALID_AADHAAR[4:8], VALID_AADHAAR[8:12]))
+    result = redact(f"Aadhaar {grouped} on file.")
+    assert "[AADHAAR-1]" in result.text
+    assert grouped not in result.text
+
+
+@pytest.mark.parametrize(
+    "written",
+    [
+        "9876543210",
+        "98765 43210",
+        "98765-43210",
+        "98765.43210",
+        "987-654-3210",
+        "987 654 3210",
+        "+91 9876543210",
+        "+919876543210",
+        "09876543210",
+    ],
+)
+def test_a_mobile_number_is_masked_whatever_groups_it(written: str) -> None:
+    result = redact(f"Reach me on {written} any day.")
+    assert "[PHONE-1]" in result.text
+    assert result.counts["PHONE"] == 1
+
+
+def test_the_same_number_written_two_ways_is_one_value() -> None:
+    result = redact("Call 9876543210 or 987-654-3210.")
+    assert result.counts["PHONE"] == 1
+    assert result.text.count("[PHONE-1]") == 2
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Invoice total 111122223333 remains unpaid.",
+        "PIN code 560001 for the address.",
+        "Cheque number 004517 dated today.",
+        "The sum of Rs. 48,500 is due.",
+    ],
+)
+def test_ordinary_numbers_in_a_notice_are_left_alone(text: str) -> None:
+    assert redact(text).text == text

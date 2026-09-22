@@ -5,7 +5,7 @@
  * calendar without leaving the page.
  */
 
-import { el, fragment } from './dom.js';
+import { el } from './dom.js';
 import { buildCalendar, downloadCalendar } from './ics.js';
 import { formatDate, t } from './i18n.js';
 
@@ -26,7 +26,7 @@ export function renderBriefing(report, receiptDate) {
       'dl',
       { class: 'definition-list' },
       el('dt', {}, t('briefing_notice_type')),
-      el('dd', {}, report.classification.rule ? report.classification.rule.title : report.notice_label ?? '—'),
+      el('dd', {}, noticeType(report)),
       el('dt', {}, t('sender_role')),
       el('dd', {}, report.sender_role),
       el('dt', {}, t('recipient_role')),
@@ -89,6 +89,20 @@ export function renderBriefing(report, receiptDate) {
 }
 
 /**
+ * What to call this notice on the sheet.
+ *
+ * The rule's title when one matched, and otherwise the label the model
+ * gave, which is the only description there is.
+ * @param {any} report
+ * @returns {string}
+ */
+function noticeType(report) {
+  if (report.classification.rule) return report.classification.rule.title;
+  const label = report.classification.label;
+  return label && label !== 'other' ? label : t('briefing_notice_unmatched');
+}
+
+/**
  * The amount rows, when the notice demands one.
  * @param {any} report
  * @returns {(HTMLElement)[]}
@@ -99,4 +113,3 @@ function amountRows(report) {
   return [el('dt', {}, t('briefing_amount')), el('dd', { class: 'amount' }, withAmount.amount_text)];
 }
 
-export { fragment };

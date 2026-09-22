@@ -5,7 +5,18 @@ import axe from 'axe-core';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import * as i18n from '../../web/js/i18n.js';
-import { renderBanners, renderDeadline, renderLaw, renderOptions, renderReport } from '../../web/js/report.js';
+import { renderAsk } from '../../web/js/ask.js';
+import { renderBriefing } from '../../web/js/briefing.js';
+import { renderCrossCheck } from '../../web/js/crosscheck.js';
+import { renderLegalAid } from '../../web/js/legal-aid.js';
+import {
+  renderBanners,
+  renderDeadline,
+  renderLaw,
+  renderOptions,
+  renderReport,
+  section,
+} from '../../web/js/report.js';
 import { buildReport, loadPage, useLanguage } from './helpers.js';
 
 beforeAll(async () => {
@@ -149,6 +160,29 @@ describe('the report in Hindi', () => {
   });
 });
 
+/**
+ * Build the report state the way main.js does, including the four
+ * interactive sections below the generated report. Testing only
+ * renderReport left the cross-check, ask, legal-aid and briefing controls
+ * unexamined, which is how an unlabelled file input survived.
+ * @returns {void}
+ */
+function buildFullReportState() {
+  const report = buildReport();
+  const target = document.querySelector('#report-body');
+  const noticeText = () => report.notice.text;
+  const documents = () => [{ label: 'notice', text: report.notice.text }];
+  target.appendChild(renderReport(report));
+  target.appendChild(
+    section('crosscheck', 'section_crosscheck', renderCrossCheck(noticeText, () => {})),
+  );
+  target.appendChild(section('ask', 'section_ask', renderAsk(documents, () => {})));
+  target.appendChild(section('legal-aid', 'section_legal_aid', renderLegalAid()));
+  target.appendChild(section('briefing', 'section_briefing', renderBriefing(report, '2026-09-16')));
+  document.querySelector('#report').hidden = false;
+  document.querySelector('#intake').hidden = true;
+}
+
 describe('accessibility', () => {
   beforeEach(() => {
     loadPage();
@@ -165,6 +199,63 @@ describe('accessibility', () => {
       rules: { 'color-contrast': { enabled: false } },
     });
     expect(results.violations.map((violation) => violation.id)).toEqual([]);
+  });
+
+  it('has no axe violations with every interactive section rendered', async () => {
+    buildFullReportState();
+    const results = await axe.run(document.body, {
+      rules: { 'color-contrast': { enabled: false } },
+    });
+    expect(results.violations.map((violation) => violation.id)).toEqual([]);
+  });
+
+  it('leaves axe nothing it cannot decide', async () => {
+    // A broken aria-labelledby reference is reported as incomplete rather
+    // than as a violation, so asserting only on violations hides it.
+    buildFullReportState();
+    const results = await axe.run(document.body, {
+      rules: { 'color-contrast': { enabled: false } },
+    });
+    expect(results.incomplete.map((check) => check.id)).toEqual([]);
+  });
+
+  it('labels every control the report builds in script', () => {
+    buildFullReportState();
+    const controls = document.querySelectorAll(
+      '#report-body input, #report-body select, #report-body textarea',
+    );
+    expect(controls.length).toBeGreaterThan(8);
+    controls.forEach((control) => {
+      const labelled =
+        document.querySelector(`label[for="${control.id}"]`) !== null ||
+        control.getAttribute('aria-label') !== null;
+      expect(labelled, control.id || control.name || control.type).toBe(true);
+    });
+  });
+
+  it('names the report region with a heading that exists', () => {
+    const region = document.querySelector('#report');
+    const id = region.getAttribute('aria-labelledby');
+    expect(id).toBeTruthy();
+    expect(document.getElementById(id), `#${id} is referenced but not defined`).not.toBeNull();
+  });
+
+  it('every aria-labelledby on the page points at something real', () => {
+    buildFullReportState();
+    document.querySelectorAll('[aria-labelledby]').forEach((node) => {
+      for (const id of (node.getAttribute('aria-labelledby') ?? '').split(/\s+/)) {
+        if (id) expect(document.getElementById(id), `#${id} missing`).not.toBeNull();
+      }
+    });
+  });
+
+  it('every aria-describedby on the page points at something real', () => {
+    buildFullReportState();
+    document.querySelectorAll('[aria-describedby]').forEach((node) => {
+      for (const id of (node.getAttribute('aria-describedby') ?? '').split(/\s+/)) {
+        if (id) expect(document.getElementById(id), `#${id} missing`).not.toBeNull();
+      }
+    });
   });
 
   it('gives the page exactly one h1', () => {

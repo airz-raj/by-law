@@ -44,7 +44,7 @@ Most legal-document tools are built for the moment *before* you sign. Mohlat is 
 1. Start it with `make dev`, open `http://localhost:8080`, and choose **Try a sample**, then the notice to vacate.
 2. Enter any recent date as the day you received it and select **Read my notice**.
 3. Read the respond-by date and open **How we worked this out**.
-4. In **Check against your agreement**, load the sample rent agreement. Two of the notice's claims come back as conflicts, each with the clause that contradicts it.
+4. In **Check against your agreement**, load the sample rent agreement. The claims that contradict it come back marked *conflicts*, each with the clause that contradicts it: clause 9 requires a month's notice where the notice gives seven days, and clause 3 already includes the maintenance it demands separately.
 5. Open **Briefing sheet** and print it, or add the deadline to your calendar.
 
 ## Approach and logic
@@ -57,7 +57,7 @@ Gemini does the language work: reading the notice, pulling out what it demands a
 - **Every quote is a receipt.** When the model says the notice demands ₹48,500, it must return the exact line. `app/core/evidence.py` finds that line in your document. If it isn't there, the claim is shown as unconfirmed rather than passed off as fact.
 - **Classification needs two votes.** A notice is matched to a rule only when the model's label and keyword evidence in the text agree (`app/core/rulebook.py`). Otherwise Mohlat uses the period written in the notice and says so.
 - **Eligibility is a rule, not a guess.** The legal-aid check is a direct encoding of Section 12 (`app/core/legal_aid.py`).
-- **Documents are data.** Text inside a document is never treated as an instruction. Lines that try to instruct an AI are flagged to the user (`app/core/screening.py`).
+- **Documents are data.** Text inside a document is never treated as an instruction. The document sits inside delimiters the user's text cannot close, and lines matching known instruction-like phrasings are flagged to the reader (`app/core/screening.py`). That screen is a pattern list, not a guarantee: the defences that do not depend on recognising an attack are the ones above and below it, because a schema-constrained answer whose every quote must be found in the source cannot be talked into inventing one.
 - **Personal numbers never reach the model.** Aadhaar numbers (checksum-validated), PAN, phone numbers, email addresses and bank account numbers are masked before any text leaves the server (`app/core/redaction.py`).
 
 ## How it works
@@ -145,8 +145,8 @@ mohlat/
 | Attribute | What we did | Evidence |
 |---|---|---|
 | Code quality | Typed throughout and checked with `mypy --strict`; ruff for lint and format; a pure domain core; a port for the model; enums for every categorical field; versioned prompts; small single-purpose modules | `pyproject.toml`, `app/core/`, `app/adapters/llm.py`, `tests/unit/test_architecture.py` |
-| Security | Personal numbers masked before model calls; files validated by magic bytes, size, page count and text length; documents delimited and screened for injected instructions; model output validated against schemas; the browser builds the page with `textContent` only; strict Content-Security-Policy and security headers; per-client rate limits; RFC 9457 error responses with no internals; no API key in production (Vertex AI through the service identity); non-root container; `bandit` and `pip-audit` in CI | `app/core/redaction.py`, `app/adapters/extract.py`, `app/core/screening.py`, `app/security/`, `web/js/dom.js`, `Dockerfile`, `.github/workflows/ci.yml` |
-| Efficiency | One model call per user action; deterministic work before and after it; a content-hash cache with expiry for repeated requests; bounded output tokens; PDF parsing loaded only when a PDF arrives; no front-end framework or build step; gzip; Cloud Run scales to zero | `app/services/pipeline.py`, `app/adapters/cache.py`, `app/adapters/extract.py`, `web/` |
+| Security | Personal numbers masked before model calls; files validated by magic bytes, size, page count and text length, with PDF extraction stopping at the text limit rather than expanding a compressed file in full; request bodies cut off at the limit whether or not they declare a length; documents delimited and screened for injected instructions; model output validated against schemas; the browser builds the page with `textContent` only; strict Content-Security-Policy and security headers; per-client rate limits keyed on the proxy-supplied end of `X-Forwarded-For`, not the caller-supplied end; RFC 9457 error responses with no internals; no API key needed in production when Vertex AI is used through the service identity; non-root container; `bandit` and `pip-audit` in CI | `app/core/redaction.py`, `app/adapters/extract.py`, `app/core/screening.py`, `app/security/`, `web/js/dom.js`, `Dockerfile`, `.github/workflows/ci.yml` |
+| Efficiency | One model call per user action, plus at most one repair attempt when the answer does not fit the schema; deterministic work before and after it; a content-hash cache with expiry for repeated requests; bounded output tokens; PDF parsing loaded only when a PDF arrives; no front-end framework or build step; gzip; Cloud Run scales to zero | `app/services/pipeline.py`, `app/adapters/cache.py`, `app/adapters/extract.py`, `web/` |
 | Testing | Table-driven unit tests for every core rule (month ends, leap years, missing receipt dates, fabricated quotes, checksum-invalid IDs); API integration tests against a fake model; accessibility tests with axe-core; a coverage gate in CI; no network in any test | `tests/`, `Makefile`, `.github/workflows/ci.yml` |
 | Accessibility | Semantic landmarks, skip link, labelled controls with hints, an error summary, live progress updates, focus moved to results, visible focus, text and shape (never colour alone) for every status, Hindi marked with `lang="hi"`, reduced-motion support, usable at 320 px width and 400 % zoom, print stylesheet, read-aloud where the browser supports it | `web/index.html`, `web/css/`, `web/js/`, `tests/web/` |
 | Problem-statement alignment | Every use case in the brief maps to a working feature | [What Mohlat does](#what-mohlat-does) |
@@ -165,7 +165,7 @@ commands in [Tests and checks](#tests-and-checks).
 | `mypy --strict` | clean, 33 modules |
 | `tsc --noEmit` with `strict` and `checkJs` | clean, 16 modules |
 | `pip-audit` and `npm audit` | 0 known vulnerabilities |
-| First-visit transfer, gzipped | 30.7 KB (page, 3 stylesheets, 16 modules, one language file) |
+| First-visit transfer, gzipped | 30.7 KB (page, 4 stylesheets, 16 modules, one language file) |
 | Repository size | 227 KiB packed |
 | Python source | 33 modules, 3,731 lines |
 | Browser source | 16 modules, 1,943 lines |
@@ -177,8 +177,8 @@ rows will be filled from the live URL rather than estimated.
 ## Google services used
 
 - **Gemini**, through the `google-genai` SDK, for structured extraction, cross-checking and grounded answers, each with a response schema.
-- **Vertex AI** in production, authenticated with the Cloud Run service identity, so there is no API key to leak.
-- **Cloud Run** in `asia-south1`, scaling to zero between requests.
+- **Vertex AI** in production, authenticated with the Cloud Run service identity, so there is no API key to leak. `docs/deploy.md` also documents an AI Studio key in Secret Manager, for projects without Vertex AI.
+- **Cloud Run**, scaling to zero between requests. `docs/deploy.md` deploys to `asia-south1`; the Vertex AI location is set separately, because not every region serves every model.
 - **Cloud Build** builds the container from source on deploy.
 - **Cloud Logging** receives structured JSON logs that record timings and outcomes, never document text.
 

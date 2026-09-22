@@ -18,7 +18,7 @@ export const ALARM_DAYS_BEFORE = 2;
 export function escapeText(value) {
   return value
     .replace(/\\/g, '\\\\')
-    .replace(/;/g, '\;')
+    .replace(/;/g, '\\;')
     .replace(/,/g, '\\,')
     .replace(/\r?\n/g, '\\n');
 }

@@ -10,6 +10,7 @@
 import { crossCheck, loadSample } from './api.js';
 import { el, fragment, replace } from './dom.js';
 import { language, t } from './i18n.js';
+import { messageForError } from './intake.js';
 
 /** The mark drawn beside each verdict, so colour is never the only signal. */
 const VERDICT_MARKS = {
@@ -37,9 +38,16 @@ export function renderCrossCheck(noticeText, announce) {
   );
 
   const fileInput = /** @type {HTMLInputElement} */ (
-    el('input', { type: 'file', id: 'agreement-file', name: 'file',
-      accept: '.txt,.pdf,text/plain,application/pdf' })
+    el('input', {
+      type: 'file',
+      id: 'agreement-file',
+      name: 'file',
+      accept: '.txt,.pdf,text/plain,application/pdf',
+      'aria-describedby': 'agreement-hint',
+    })
   );
+
+  const fileLabel = el('label', { for: 'agreement-file' }, t('crosscheck_file_label'));
 
   const sampleButton = /** @type {HTMLButtonElement} */ (
     el('button', { type: 'button', class: 'button button-quiet' }, t('crosscheck_sample'))
@@ -64,8 +72,8 @@ export function renderCrossCheck(noticeText, announce) {
         el('label', { for: 'agreement-text' }, t('crosscheck_label')),
         el('p', { class: 'hint', id: 'agreement-hint' }, t('crosscheck_hint')),
         textarea,
-        fileInput,
       ),
+      el('div', { class: 'field' }, fileLabel, fileInput),
       el('div', { class: 'button-row' }, submit, sampleButton),
     )
   );
@@ -88,8 +96,7 @@ export function renderCrossCheck(noticeText, announce) {
       replace(output, renderClaims(result));
       announce('');
     } catch (error) {
-      const detail = error instanceof Error && error.message ? error.message : t('error_generic');
-      replace(output, el('p', { class: 'provisional-note' }, detail));
+      replace(output, el('p', { class: 'provisional-note' }, messageForError(error)));
       announce('');
     } finally {
       submit.disabled = false;

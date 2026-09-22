@@ -92,14 +92,22 @@ export function buildRequest(values) {
   return body;
 }
 
+/** Problem types whose detail is not written for a reader. */
+const OPAQUE_TYPES = new Set(['mohlat:internal', 'mohlat:network', 'mohlat:sample']);
+
 /**
- * Turn a problem type from the server into the message to show.
- * The server's own detail is preferred, because it is written for a
- * reader; the generic string is the fallback.
- * @param {{type: string, detail: string}} error
+ * Turn a problem from the server into the message to show.
+ *
+ * The server writes its detail for a reader, so that is preferred. The
+ * types listed above carry an internal code instead, and fall back to the
+ * translated sentence.
+ * @param {unknown} error
  * @returns {string}
  */
 export function messageForError(error) {
-  if (error.detail && error.type !== 'mohlat:internal') return error.detail;
+  if (typeof error !== 'object' || error === null) return t('error_generic');
+  const problem = /** @type {{type?: string, detail?: string}} */ (error);
+  if (problem.type === 'mohlat:network') return t('error_network');
+  if (problem.detail && !OPAQUE_TYPES.has(problem.type ?? '')) return problem.detail;
   return t('error_generic');
 }

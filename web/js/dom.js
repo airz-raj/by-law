@@ -65,6 +65,7 @@ export function isAllowedAttribute(name) {
  * @returns {boolean}
  */
 export function isSafeHref(value) {
+  if (value.startsWith('//')) return false; // protocol-relative: another origin
   return value.startsWith('https://') || value.startsWith('#') || value.startsWith('/');
 }
 
