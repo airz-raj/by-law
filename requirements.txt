@@ -1,6 +1,7 @@
-fastapi==0.115.12
-uvicorn==0.34.2
-pydantic-settings==2.9.1
-python-multipart==0.0.20
-google-genai==1.14.0
-pypdf==5.4.0
+fastapi==0.141.1
+starlette==1.6.0
+uvicorn==0.53.0
+pydantic-settings==2.15.0
+python-multipart==0.0.32
+google-genai==2.24.0
+pypdf==6.19.0
