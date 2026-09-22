@@ -4,7 +4,7 @@
 
 *Mohlat* (मोहलत) is the time you're given to respond. Most people lose some of it just working out what the notice means.
 
-- **Live app:** <LIVE_URL>
+- **Run it:** [locally in three commands](#run-it-locally), or deploy to Cloud Run with [`docs/deploy.md`](docs/deploy.md)
 - **Challenge:** PromptWars: Virtual (Exclusive Edition), AI for Legal Assistance & Access
 - **Built with:** Google Antigravity, Gemini, Cloud Run
 
@@ -41,7 +41,7 @@ Most legal-document tools are built for the moment *before* you sign. Mohlat is 
 
 ### Try it in a minute
 
-1. Open the live app and choose **Try a sample**, then the notice to vacate.
+1. Start it with `make dev`, open `http://localhost:8080`, and choose **Try a sample**, then the notice to vacate.
 2. Enter any recent date as the day you received it and select **Read my notice**.
 3. Read the respond-by date and open **How we worked this out**.
 4. In **Check against your agreement**, load the sample rent agreement. Two of the notice's claims come back as conflicts, each with the clause that contradicts it.
@@ -120,7 +120,9 @@ Dependencies point inward. `app/core` imports nothing else from the app and does
 ```
 mohlat/
 ├── app/
-│   ├── main.py              app factory, middleware, static files
+│   ├── main.py              create_app(): middleware, routes, static files
+│   ├── observability.py     JSON logging for Cloud Logging
+│   ├── version.py           the version the health endpoint reports
 │   ├── config.py            settings from the environment
 │   ├── errors.py            error types
 │   ├── api/                 routes.py, schemas.py, dependencies.py, problems.py
@@ -128,9 +130,9 @@ mohlat/
 │   ├── core/                models.py, dates.py, deadlines.py, rulebook.py,
 │   │                        evidence.py, redaction.py, screening.py, legal_aid.py
 │   ├── adapters/            llm.py, extract.py, cache.py
-│   ├── security/            headers.py, rate_limit.py, request_id.py
+│   ├── security/            headers.py, rate_limit.py, request_id.py, body_size.py
 │   └── data/rules_in.json
-├── web/                     index.html, css/, js/, i18n/, samples/
+├── web/                     index.html, css/, js/ (16 modules), i18n/, samples/
 ├── tests/                   unit/, integration/, web/, fixtures/
 ├── docs/                    deploy.md, design.md, decisions.md, prompt-journal.md
 ├── Dockerfile, Makefile, pyproject.toml, requirements.txt, requirements-dev.txt
@@ -151,15 +153,26 @@ mohlat/
 
 ### Measured
 
+Measured on 22 September 2026, on Python 3.12.3 and Node 22.22, by running the
+commands in [Tests and checks](#tests-and-checks).
+
 | Measure | Result |
 |---|---|
-| Python tests and coverage | TBD |
-| Web tests and axe-core violations | TBD |
-| Reading a sample notice, live (median) | TBD |
-| Same request again (cache hit) | TBD |
-| Home page transfer size | TBD |
-| Lighthouse mobile: performance, accessibility, best practices | TBD |
-| Repository size | TBD |
+| Python tests | 327 passing (247 unit, 80 integration) |
+| Python coverage | 97.8% overall, 98% for `app/core` (gate: 90%) |
+| Browser tests | 298 passing |
+| axe-core violations | 0, on both the intake and the report state |
+| `mypy --strict` | clean, 33 modules |
+| `tsc --noEmit` with `strict` and `checkJs` | clean, 16 modules |
+| `pip-audit` and `npm audit` | 0 known vulnerabilities |
+| First-visit transfer, gzipped | 30.7 KB (page, 3 stylesheets, 16 modules, one language file) |
+| Repository size | 227 KiB packed |
+| Python source | 33 modules, 3,731 lines |
+| Browser source | 16 modules, 1,943 lines |
+
+Not measured, because nothing is deployed yet: live request latency, cache-hit
+latency, and Lighthouse scores. `docs/deploy.md` has the commands, and these
+rows will be filled from the live URL rather than estimated.
 
 ## Google services used
 
