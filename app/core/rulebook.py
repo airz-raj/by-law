@@ -89,6 +89,8 @@ def _parse_rule(raw: Any, seen_ids: set[str]) -> Rule:
         raise ValueError(f"rule {rule_id}: period_days must be a positive integer")
 
     clock_starts = raw.get("clock_starts")
+    if not isinstance(clock_starts, str):
+        raise ValueError(f"rule {rule_id}: clock_starts must be a string")
     try:
         clock = ClockStart(clock_starts)
     except ValueError as exc:
