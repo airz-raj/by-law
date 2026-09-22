@@ -27,6 +27,8 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "ARG001", "ARG002", "S105", "S106"]
+# The build contract names these exceptions; N818's Error suffix would rename them.
+"app/errors.py" = ["N818"]
 
 [tool.mypy]
 python_version = "3.12"

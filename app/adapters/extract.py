@@ -60,12 +60,14 @@ def extract_text(file_obj: BinaryIO, settings: Settings) -> str:
             text = decoded
         except UnicodeDecodeError as e:
             raise InputRejected(
-                "UNSUPPORTED_TYPE",
-                "Only UTF-8 text and readable PDFs are supported."
+                "UNSUPPORTED_TYPE", "Only UTF-8 text and readable PDFs are supported."
             ) from e
 
         if len(text.strip()) < settings.min_notice_chars:
-            raise InputRejected("TEXT_TOO_SHORT", "The text provided is too short to be a legal notice.")
+            raise InputRejected(
+                "TEXT_TOO_SHORT",
+                "That is too short to be a notice. Paste the whole document.",
+            )
 
     # 4. Enforce max document chars limit
     if len(text) > settings.max_document_chars:

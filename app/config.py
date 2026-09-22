@@ -1,6 +1,7 @@
 """Application settings and limits from the environment."""
 
 from __future__ import annotations
+
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -9,9 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application configuration and hard limits."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_env: Literal["dev", "prod"] = "dev"
     trust_proxy: bool = False
@@ -42,3 +41,7 @@ class Settings(BaseSettings):
     max_plain_terms: int = 6
     max_claims: int = 10
     max_grounded_quotes: int = 3
+
+    max_output_tokens_decode: int = 4096
+    max_output_tokens_cross_check: int = 4096
+    max_output_tokens_ask: int = 1024
