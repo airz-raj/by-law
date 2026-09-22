@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mohlat — understand your legal notice</title>
+<meta name="description" content="Read a legal notice, see the date you need to act by, and what you can do next. Information, not legal advice.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/components.css">
+<link rel="stylesheet" href="/css/print.css" media="print">
+</head>
+<body>
+<a class="skip-link" href="#main" data-i18n="skip_to_content">Skip to the main content</a>
+
+<header class="site-header">
+  <div class="wrap header-row">
+    <p class="wordmark">Mohlat</p>
+    <nav aria-label="Language">
+      <ul class="language-switch">
+        <li><button type="button" class="language-button is-current" data-language="en" aria-pressed="true">English</button></li>
+        <li><button type="button" class="language-button" data-language="hi" aria-pressed="false" lang="hi">हिन्दी</button></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+
+  <section id="intake" aria-labelledby="intake-heading">
+    <h1 id="intake-heading" data-i18n="intake_heading">Understand your legal notice and the date you need to act by</h1>
+    <p class="lede" data-i18n="intake_lede">Paste the notice or upload it. Mohlat explains what it asks for, works out the date you need to act by, and shows what you can do next.</p>
+
+    <div class="intake-columns">
+      <form id="intake-form" novalidate>
+        <div id="error-summary" class="error-summary" tabindex="-1" role="alert" hidden>
+          <h2 data-i18n="error_summary_heading">Check these before continuing</h2>
+          <ul id="error-summary-list"></ul>
+        </div>
+
+        <fieldset class="field">
+          <legend data-i18n="source_legend">Your notice</legend>
+          <div class="radio-row">
+            <span class="radio">
+              <input type="radio" id="source-paste" name="source" value="paste" checked>
+              <label for="source-paste" data-i18n="source_paste">Paste text</label>
+            </span>
+            <span class="radio">
+              <input type="radio" id="source-file" name="source" value="file">
+              <label for="source-file" data-i18n="source_file">Upload a file</label>
+            </span>
+          </div>
+        </fieldset>
+
+        <div class="field" id="paste-field">
+          <label for="notice-text" data-i18n="notice_text_label">The text of your notice</label>
+          <p class="hint" id="notice-text-hint" data-i18n="notice_text_hint">Copy everything, including the date at the top and the address.</p>
+          <textarea id="notice-text" name="text" rows="10" aria-describedby="notice-text-hint"></textarea>
+        </div>
+
+        <div class="field" id="file-field" hidden>
+          <label for="notice-file" data-i18n="notice_file_label">Your notice as a file</label>
+          <p class="hint" id="notice-file-hint" data-i18n="notice_file_hint">A text file, or a PDF you can select text in. Up to 5 MB and 30 pages.</p>
+          <input type="file" id="notice-file" name="file" accept=".txt,.pdf,text/plain,application/pdf" aria-describedby="notice-file-hint">
+        </div>
+
+        <div class="field">
+          <label for="receipt-date" data-i18n="receipt_date_label">When did you receive it?</label>
+          <p class="hint" id="receipt-date-hint" data-i18n="receipt_date_hint">The day it reached you, not the date printed on it. Many periods run from this day.</p>
+          <input type="date" id="receipt-date" name="receipt_date" aria-describedby="receipt-date-hint">
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="language-select" data-i18n="language_label">Explain in</label>
+            <select id="language-select" name="language">
+              <option value="en">English</option>
+              <option value="hi" lang="hi">हिन्दी</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="reading-level" data-i18n="reading_level_label">How much detail</label>
+            <select id="reading-level" name="reading_level">
+              <option value="simple" data-i18n="reading_level_simple">Simple</option>
+              <option value="detailed" data-i18n="reading_level_detailed">Detailed</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="button button-primary" id="submit-button" data-i18n="submit">Read my notice</button>
+
+        <div class="field samples">
+          <p id="samples-label" data-i18n="samples_label">Or try a sample:</p>
+          <div class="button-row" role="group" aria-labelledby="samples-label">
+            <button type="button" class="button button-quiet" data-sample="cheque-demand-notice" data-i18n="sample_cheque">Cheque</button>
+            <button type="button" class="button button-quiet" data-sample="bank-demand-notice" data-i18n="sample_bank">Bank loan</button>
+            <button type="button" class="button button-quiet" data-sample="vacate-notice" data-i18n="sample_vacate">Notice to vacate</button>
+          </div>
+        </div>
+      </form>
+
+      <aside class="next-steps" aria-labelledby="next-steps-heading">
+        <h2 id="next-steps-heading" data-i18n="next_steps_heading">What happens next</h2>
+        <ol>
+          <li data-i18n="next_step_1">We read the notice and explain it in plain language.</li>
+          <li data-i18n="next_step_2">We work out the date you need to act by, and show the working.</li>
+          <li data-i18n="next_step_3">You see your options and can check the notice against your agreement.</li>
+        </ol>
+        <p class="hint" data-i18n="privacy_note">Nothing you upload is stored. The text stays in memory for the length of one request.</p>
+      </aside>
+    </div>
+  </section>
+
+  <p id="progress" class="progress" role="status" aria-live="polite"></p>
+
+  <section id="report" aria-labelledby="report-heading" hidden>
+    <div class="report-layout">
+      <nav class="contents" aria-labelledby="contents-heading">
+        <h2 id="contents-heading" data-i18n="contents_heading">On this page</h2>
+        <ul id="contents-list"></ul>
+        <button type="button" class="button button-quiet" id="start-again" data-i18n="start_again">Start again</button>
+      </nav>
+      <div id="report-body"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p data-i18n="disclaimer_footer">Mohlat explains documents and procedures. It is information, not legal advice, and does not create a lawyer-client relationship.</p>
+    <p data-i18n="legal_aid_footer">Free legal aid may be available under the Legal Services Authorities Act, 1987. The NALSA helpline is 15100.</p>
+  </div>
+</footer>
+
+<script type="module" src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+/* Element defaults. Nothing here is decorative. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--paper);
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-stack);
+  font-size: var(--size-0);
+  line-height: var(--line-body);
+  -webkit-text-size-adjust: 100%;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  margin: 0 0 var(--space-3);
+  font-weight: 650;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--size-3);
+  max-width: var(--measure);
+}
+
+h2 {
+  font-size: var(--size-2);
+  margin-top: var(--space-6);
+}
+
+h3 {
+  font-size: var(--size-1);
+  margin-top: var(--space-5);
+}
+
+p,
+li {
+  max-width: var(--measure);
+}
+
+p {
+  margin: 0 0 var(--space-4);
+}
+
+a {
+  color: var(--ink);
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: var(--stamp);
+}
+
+:focus-visible {
+  outline: var(--focus-width) solid var(--ink);
+  outline-offset: var(--focus-offset);
+}
+
+time,
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+mark {
+  background: var(--highlighter);
+  color: var(--ink);
+  padding: 0.05em 0.1em;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--space-4);
+  top: -4rem;
+  z-index: 10;
+  background: var(--surface);
+  color: var(--ink);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--ink);
+  transition: top 120ms ease;
+}
+
+.skip-link:focus {
+  top: var(--space-3);
+}
+
+.site-header {
+  border-bottom: 1px solid var(--rule);
+  padding: var(--space-4) 0;
+}
+
+.header-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.wordmark {
+  margin: 0;
+  font-size: var(--size-1);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.site-footer {
+  margin-top: var(--space-7);
+  border-top: 1px solid var(--rule);
+  padding: var(--space-5) 0 var(--space-6);
+  color: var(--ink-soft);
+}
+
+.site-footer p {
+  margin-bottom: var(--space-2);
+}
+
+main {
+  padding-bottom: var(--space-6);
+}
+
+.lede {
+  font-size: var(--size-1);
+  color: var(--ink-soft);
+  max-width: var(--measure);
+}
+
+.hint {
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+  margin: 0 0 var(--space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

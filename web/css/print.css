@@ -1,0 +1,53 @@
+/* Printing gives the briefing sheet and nothing else. */
+
+@page {
+  margin: 18mm;
+}
+
+body {
+  background: #fff;
+  color: #000;
+  font-size: 11pt;
+}
+
+.site-header,
+.site-footer,
+.contents,
+.progress,
+#intake,
+.button,
+.language-switch,
+.skip-link,
+.source-panel,
+form,
+details {
+  display: none !important;
+}
+
+.report-layout {
+  display: block;
+}
+
+.report-section {
+  display: none;
+}
+
+.report-section.print-me {
+  display: block;
+  page-break-inside: avoid;
+}
+
+.briefing {
+  border: 0;
+  padding: 0;
+}
+
+.print-only {
+  display: block;
+}
+
+a[href^="http"]::after {
+  content: " (" attr(href) ")";
+  font-size: 9pt;
+  word-break: break-all;
+}

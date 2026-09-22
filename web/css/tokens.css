@@ -1,0 +1,40 @@
+/* Design tokens. Every value here is decided in docs/design.md. */
+
+:root {
+  --paper: #f3f5f2;
+  --ink: #1d2a4d;
+  --ink-soft: #4a5470;
+  --stamp: #8c1d2c;
+  --confirmed: #2d6a4b;
+  --highlighter: #f4d67a;
+  --rule: #d7dbd5;
+  --surface: #ffffff;
+
+  --font-stack: "Segoe UI", "Nirmala UI", "Noto Sans", "Noto Sans Devanagari",
+    "Kohinoor Devanagari", system-ui, sans-serif;
+
+  --size-0: 1rem;
+  --size-1: 1.25rem;
+  --size-2: 1.5625rem;
+  --size-3: 1.9375rem;
+  --size-4: 2.4375rem;
+
+  --line-body: 1.6;
+  --measure: 70ch;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius: 2px;
+  --focus-width: 3px;
+  --focus-offset: 2px;
+}
+
+:root:lang(hi) {
+  --line-body: 1.75;
+}
