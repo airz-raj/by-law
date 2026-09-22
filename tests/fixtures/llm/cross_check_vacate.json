@@ -1,0 +1,45 @@
+{
+  "agreement_summary": "An eleven-month rent agreement dated 1 October 2025 for the second floor of House 21, Lane 4, Ganga Vihar. The rent is Rs. 14,000 a month and clause 3 says that figure already includes maintenance. Clause 9 says either side must give one month's written notice to end the agreement, and that neither side may end it on shorter notice.",
+  "claims": [
+    {
+      "claim": "Clause 9 allows the landlord to end the tenancy on seven days' notice",
+      "category": "CLAUSE",
+      "notice_quote": "As per clause 9 of the rent agreement, seven days' notice is sufficient for termination of the tenancy by the landlord",
+      "agreement_quote": "Either party may terminate this agreement by giving to the other one month's notice in writing.",
+      "verdict": "CONFLICTS",
+      "explanation": "Clause 9 requires one month's written notice from either party, and adds that neither party may terminate on shorter notice. The notice gives seven days."
+    },
+    {
+      "claim": "Maintenance of Rs. 3,000 a month is payable separately, over and above the rent",
+      "category": "AMOUNT",
+      "notice_quote": "which is payable by you separately and over and above the monthly rent",
+      "agreement_quote": "The monthly rent stated in clause 2 is inclusive of all maintenance charges for the said premises, and no separate maintenance charge shall be demanded by the Landlord",
+      "verdict": "CONFLICTS",
+      "explanation": "Clause 3 states the rent already includes all maintenance and that no separate maintenance charge may be demanded during the agreement."
+    },
+    {
+      "claim": "The tenancy began under an agreement executed on 1 October 2025",
+      "category": "DATE",
+      "notice_quote": "as my tenant under a rent agreement executed between us on 1 October 2025",
+      "agreement_quote": "The tenancy shall commence on 1 October 2025 and shall subsist for a period of eleven months",
+      "verdict": "CONSISTENT",
+      "explanation": "Both documents give the same start date for the tenancy."
+    },
+    {
+      "claim": "The security deposit may be adjusted against the arrears",
+      "category": "OBLIGATION",
+      "notice_quote": "The security deposit shall be adjusted against the arrears and any damage to the premises",
+      "agreement_quote": "to be refunded at the time of handing over vacant possession after adjustment of any arrears of rent or the cost of repairing damage caused by the Tenant",
+      "verdict": "CONSISTENT",
+      "explanation": "Clause 4 allows the deposit to be adjusted against arrears of rent and the cost of repairing damage."
+    },
+    {
+      "claim": "The tenant is liable for mesne profits for unauthorised occupation",
+      "category": "OBLIGATION",
+      "notice_quote": "you shall be liable for mesne profits for the period of unauthorised occupation together with all costs",
+      "agreement_quote": null,
+      "verdict": "NOT_IN_AGREEMENT",
+      "explanation": "The agreement says nothing about mesne profits or compensation for occupation after the tenancy ends."
+    }
+  ]
+}

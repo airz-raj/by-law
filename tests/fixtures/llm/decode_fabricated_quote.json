@@ -1,0 +1,137 @@
+{
+  "notice_label": "in.ni_act.s138_demand",
+  "summary": "An advocate has written to you on behalf of Ujwala Pathak of Pathak Furnishings. The letter says a cheque you gave for Rs. 48,500 was returned unpaid because there was not enough money in the account. It asks you to pay that amount within fifteen days of receiving the letter. If you do not pay in that time, the letter says a case may be filed in court under Section 138 of the Negotiable Instruments Act, 1881. Section 138 is the law that makes it an offence when a cheque given to pay a debt bounces and the money is still not paid after a written demand.",
+  "sender_role": "advocate acting for the person who received the cheque",
+  "recipient_role": "the person who wrote the cheque",
+  "demands": [
+    {
+      "what": "Pay a penalty the notice does not actually mention",
+      "amount_text": "Rs. 48,500/-",
+      "quote": "You are directed to pay a penalty of Rs. 2,00,000 within three days of this notice"
+    },
+    {
+      "what": "Pay by demand draft at the advocate's chamber or by bank transfer",
+      "amount_text": null,
+      "quote": "Payment may be made by demand draft in favour of \"Ujwala Pathak\" delivered at my chamber"
+    }
+  ],
+  "cited_references": [
+    {
+      "reference": "Section 138, Negotiable Instruments Act, 1881",
+      "quote": "LEGAL NOTICE UNDER SECTION 138 OF THE NEGOTIABLE INSTRUMENTS ACT, 1881"
+    },
+    {
+      "reference": "Invoices PF/2026/211 and PF/2026/240",
+      "quote": "fell due against invoices PF/2026/211 and PF/2026/240"
+    },
+    {
+      "reference": "Cheque number 004517 dated 28 August 2026",
+      "quote": "you issued cheque number 004517 dated 28 August 2026 for Rs. 48,500/-"
+    }
+  ],
+  "dates": [
+    {
+      "kind": "NOTICE_DATE",
+      "label": "The date written at the top of the notice",
+      "quote": "Dated: 14 September 2026"
+    },
+    {
+      "kind": "EVENT_DATE",
+      "label": "The date on the cheque",
+      "quote": "cheque number 004517 dated 28 August 2026"
+    },
+    {
+      "kind": "EVENT_DATE",
+      "label": "The date the cheque was presented to the bank",
+      "quote": "My client presented the said cheque through her banker on 2 September 2026."
+    },
+    {
+      "kind": "EVENT_DATE",
+      "label": "The date the cheque was returned unpaid",
+      "quote": "The cheque was returned unpaid on 4 September 2026"
+    },
+    {
+      "kind": "EVENT_DATE",
+      "label": "The date the sender says the bank memo reached them",
+      "quote": "The memo was received by my client on 5 September 2026."
+    }
+  ],
+  "stated_deadline": {
+    "period_days": 15,
+    "by_date_quote": null,
+    "quote": "within fifteen days of the receipt of this notice"
+  },
+  "options": [
+    {
+      "kind": "COMPLY",
+      "what_it_involves": "Paying Rs. 48,500 within the fifteen days, by demand draft or bank transfer, and keeping proof of the payment.",
+      "prepare": [
+        "The cheque and the bank return memo",
+        "Proof of what the money was for",
+        "A record of the payment you make"
+      ],
+      "if_ignored": "The notice says a complaint may be filed in court under Section 138."
+    },
+    {
+      "kind": "REPLY_IN_WRITING",
+      "what_it_involves": "Writing back through the advocate's chamber setting out your account of the transaction and any part of the claim you disagree with, within the fifteen days.",
+      "prepare": [
+        "Invoices and delivery records",
+        "Any messages about the goods or the payment",
+        "A copy of this notice with the envelope"
+      ],
+      "if_ignored": "The notice says the matter will proceed in court after fifteen days."
+    },
+    {
+      "kind": "NEGOTIATE",
+      "what_it_involves": "Asking the sender, in writing, for time or for payment in instalments. Any agreement reached is worth recording in writing.",
+      "prepare": [
+        "What you can pay and by when",
+        "Any earlier payments already made"
+      ],
+      "if_ignored": "Without an agreement the period in the notice continues to run."
+    },
+    {
+      "kind": "FREE_LEGAL_AID",
+      "what_it_involves": "Checking whether you fall within the categories in Section 12 of the Legal Services Authorities Act, 1987, which can mean a lawyer at no cost through the District Legal Services Authority.",
+      "prepare": [
+        "Proof of income if you are relying on the income category",
+        "This notice and the bank memo"
+      ],
+      "if_ignored": "The fifteen-day period runs whether or not you have found help."
+    }
+  ],
+  "documents_to_gather": [
+    "The cheque, or a photograph of it",
+    "The bank memo returning the cheque unpaid",
+    "Invoices PF/2026/211 and PF/2026/240",
+    "Bank statements for the account the cheque was drawn on",
+    "Any messages or letters exchanged about this payment",
+    "The envelope this notice arrived in, showing the delivery date"
+  ],
+  "questions_for_lawyer": [
+    "Was this demand made within thirty days of the bank informing the sender that the cheque had bounced?",
+    "Does the amount claimed match what the invoices actually show?",
+    "What proof do I have of the date this notice reached me?",
+    "If I pay within the fifteen days, what written confirmation should I ask for?",
+    "Does anything I have in writing show the cheque was given for something other than a debt due?"
+  ],
+  "plain_terms": [
+    {
+      "term": "Dishonour",
+      "meaning": "The bank refused to pay the cheque and sent it back."
+    },
+    {
+      "term": "Legally enforceable debt",
+      "meaning": "Money the law would allow someone to recover from you."
+    },
+    {
+      "term": "Demand draft",
+      "meaning": "A pre-paid payment order bought from a bank."
+    },
+    {
+      "term": "Registered Post A.D.",
+      "meaning": "Post that records who signed for the delivery, so the sender can prove it arrived."
+    }
+  ]
+}

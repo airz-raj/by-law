@@ -1,0 +1,117 @@
+{
+  "notice_label": "in.tpa.s106_termination",
+  "summary": "Your landlord has written asking you to move out of the second floor of House 21 within seven days of receiving the letter, saying he wants it for his own family. He says clause 9 of your rent agreement allows seven days' notice. He also asks for Rs. 9,000 for maintenance he says is unpaid for June, July and August 2026. If you do not move out and pay, the letter says he will go to court for eviction and for the money.",
+  "sender_role": "landlord",
+  "recipient_role": "tenant",
+  "demands": [
+    {
+      "what": "Move out and hand over the premises",
+      "amount_text": null,
+      "quote": "vacate the tenanted premises and hand over peaceful possession of the same to me within seven days of receipt of this notice"
+    },
+    {
+      "what": "Pay the maintenance the landlord says is unpaid",
+      "amount_text": "Rs. 9,000/-",
+      "quote": "a sum of Rs. 9,000/- (Rupees Nine Thousand only) is outstanding from you towards unpaid maintenance charges"
+    }
+  ],
+  "cited_references": [
+    {
+      "reference": "Clause 9 of the rent agreement",
+      "quote": "As per clause 9 of the rent agreement, seven days' notice is sufficient for termination of the tenancy by the landlord"
+    },
+    {
+      "reference": "The rent agreement dated 1 October 2025",
+      "quote": "as my tenant under a rent agreement executed between us on 1 October 2025"
+    }
+  ],
+  "dates": [
+    {
+      "kind": "NOTICE_DATE",
+      "label": "The date written at the top of the notice",
+      "quote": "Dated: 15 September 2026"
+    },
+    {
+      "kind": "EVENT_DATE",
+      "label": "The date of the rent agreement",
+      "quote": "a rent agreement executed between us on 1 October 2025"
+    }
+  ],
+  "stated_deadline": {
+    "period_days": 7,
+    "by_date_quote": null,
+    "quote": "within seven days of receipt of this notice"
+  },
+  "options": [
+    {
+      "kind": "REPLY_IN_WRITING",
+      "what_it_involves": "Writing back setting out what clause 9 of your agreement actually says about notice, and what clause 3 says about maintenance, keeping proof of posting.",
+      "prepare": [
+        "Your copy of the rent agreement",
+        "Rent receipts or bank transfers",
+        "This notice and its envelope"
+      ],
+      "if_ignored": "The notice says eviction proceedings and a claim for the money will follow."
+    },
+    {
+      "kind": "NEGOTIATE",
+      "what_it_involves": "Asking the landlord in writing for the notice period the agreement provides, or agreeing a moving date that suits both of you, and recording whatever is agreed.",
+      "prepare": [
+        "The date you could realistically move",
+        "A note of the deposit paid"
+      ],
+      "if_ignored": "Without an agreement the landlord may go to court as the notice says."
+    },
+    {
+      "kind": "DISPUTE_WITH_HELP",
+      "what_it_involves": "Taking the notice and the agreement to a lawyer or a legal aid clinic to check whether the seven-day period and the maintenance claim hold up.",
+      "prepare": [
+        "The agreement",
+        "The notice",
+        "Records of every payment made"
+      ],
+      "if_ignored": "Any court proceedings would go ahead without your side being put."
+    },
+    {
+      "kind": "FREE_LEGAL_AID",
+      "what_it_involves": "Checking the Section 12 categories of the Legal Services Authorities Act, 1987, which can mean a lawyer at no cost through the District Legal Services Authority.",
+      "prepare": [
+        "Proof of income if you rely on the income category",
+        "The notice and the agreement"
+      ],
+      "if_ignored": "The period in the notice runs whether or not you have found help."
+    }
+  ],
+  "documents_to_gather": [
+    "Your signed copy of the rent agreement",
+    "Receipts or bank records for rent paid",
+    "Any receipts for maintenance already paid",
+    "The envelope this notice arrived in",
+    "Messages exchanged with the landlord about maintenance"
+  ],
+  "questions_for_lawyer": [
+    "Does clause 9 of my agreement allow the landlord to end it on seven days' notice?",
+    "Does clause 3 mean the maintenance being claimed is already covered by my rent?",
+    "Is my arrangement a lease or a leave-and-licence, and does that change the notice period?",
+    "Does my state's rent law set a different notice period from the agreement?",
+    "What can the landlord do before a court has decided anything?"
+  ],
+  "plain_terms": [
+    {
+      "term": "Mesne profits",
+      "meaning": "Compensation for the use of property by someone who had no right to occupy it."
+    },
+    {
+      "term": "Peaceful possession",
+      "meaning": "Handing the property back without a dispute over who is entitled to it."
+    },
+    {
+      "term": "Arrears",
+      "meaning": "Money that was due earlier and has not been paid."
+    },
+    {
+      "term": "Tenanted premises",
+      "meaning": "The part of the property that was rented out to you."
+    }
+  ]
+}
