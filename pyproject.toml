@@ -1,0 +1,66 @@
+[project]
+name = "mohlat"
+version = "1.0.0"
+description = "Understand your legal notice and the date you need to act by"
+requires-python = ">=3.12"
+license = "MIT"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",   # pycodestyle + pyflakes
+    "I",              # isort
+    "B",              # flake8-bugbear
+    "UP",             # pyupgrade
+    "SIM",            # flake8-simplify
+    "N",              # pep8-naming
+    "S",              # flake8-bandit
+    "RUF",            # ruff-specific
+    "C4",             # flake8-comprehensions
+    "PT",             # flake8-pytest-style
+    "RET",            # flake8-return
+    "ARG",            # flake8-unused-arguments
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "ARG001", "ARG002", "S105", "S106"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = ["google.*", "pypdf.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit", "tests/integration"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-fail-under=90",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "node_modules"]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__",
+    "@overload",
+]
