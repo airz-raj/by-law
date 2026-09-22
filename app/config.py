@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Self
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +15,7 @@ class Settings(BaseSettings):
 
     app_env: Literal["dev", "prod"] = "dev"
     trust_proxy: bool = False
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     llm_backend: Literal["aistudio", "vertex"] = "aistudio"
     gemini_api_key: str | None = None
@@ -45,3 +47,19 @@ class Settings(BaseSettings):
     max_output_tokens_decode: int = 4096
     max_output_tokens_cross_check: int = 4096
     max_output_tokens_ask: int = 1024
+
+    @model_validator(mode="after")
+    def _check_backend_is_configured(self) -> Self:
+        """Fail at start-up, not mid-request, if the backend cannot be reached.
+
+        Raises:
+            ValueError: The chosen backend is missing what it needs.
+        """
+        if self.llm_backend == "aistudio" and not self.gemini_api_key:
+            raise ValueError(
+                "LLM_BACKEND=aistudio needs GEMINI_API_KEY. "
+                "Copy .env.example to .env and add a key, or set LLM_BACKEND=vertex."
+            )
+        if self.llm_backend == "vertex" and not (self.gcp_project and self.gcp_location):
+            raise ValueError("LLM_BACKEND=vertex needs GCP_PROJECT and GCP_LOCATION.")
+        return self

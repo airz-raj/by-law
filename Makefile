@@ -4,7 +4,7 @@ install:
 	pip install -r requirements-dev.txt
 
 dev:
-	uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
+	uvicorn app.main:create_app --factory --reload --port 8080
 
 lint:
 	ruff check app tests
