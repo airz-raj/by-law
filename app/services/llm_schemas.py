@@ -1,68 +1,149 @@
-"""Pydantic schemas for structured LLM outputs."""
+"""Schemas the model must fill.
+
+Every field the model returns is declared here, so an answer that does not
+fit the shape is rejected before it reaches the pipeline. Quotes are
+constrained in length because a quote is only useful if it can be found
+word for word in the source document.
+"""
 
 from __future__ import annotations
 
-from typing import Literal
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
-# ---------------------------------------------------------------------------
-# Notice Extraction
-# ---------------------------------------------------------------------------
+QUOTE_MIN_LENGTH = 12
+QUOTE_MAX_LENGTH = 200
 
 
-class ExtractedDate(BaseModel):
-    """A date found in the text."""
-    date_str: str = Field(description="The date exactly as written in the text")
-    context: str = Field(description="A short snippet showing why this date is relevant")
+class OptionKind(StrEnum):
+    """The kinds of option Mohlat will describe. It never ranks them."""
+
+    COMPLY = "COMPLY"
+    REPLY_IN_WRITING = "REPLY_IN_WRITING"
+    NEGOTIATE = "NEGOTIATE"
+    DISPUTE_WITH_HELP = "DISPUTE_WITH_HELP"
+    FREE_LEGAL_AID = "FREE_LEGAL_AID"
 
 
-class ExtractedDemand(BaseModel):
-    """A specific demand made in the notice."""
-    amount_or_action: str = Field(description="What is being demanded (e.g. Rs 50,000 or 'vacate premises')")
-    deadline: str | None = Field(description="The deadline given for this demand, if any")
-    quote: str = Field(description="Exact 5-10 word quote from the text stating this demand")
+class DateKind(StrEnum):
+    """What a date in the notice refers to."""
+
+    NOTICE_DATE = "NOTICE_DATE"
+    DUE_DATE = "DUE_DATE"
+    EVENT_DATE = "EVENT_DATE"
+    OTHER = "OTHER"
+
+
+class Verdict(StrEnum):
+    """How a claim in the notice stands against the agreement."""
+
+    CONSISTENT = "CONSISTENT"
+    CONFLICTS = "CONFLICTS"
+    NOT_IN_AGREEMENT = "NOT_IN_AGREEMENT"
+    UNCLEAR = "UNCLEAR"
+
+
+class ClaimCategory(StrEnum):
+    """What kind of thing a claim asserts."""
+
+    AMOUNT = "AMOUNT"
+    PERIOD = "PERIOD"
+    CLAUSE = "CLAUSE"
+    DATE = "DATE"
+    OBLIGATION = "OBLIGATION"
+    OTHER = "OTHER"
+
+
+Quote = Field(min_length=QUOTE_MIN_LENGTH, max_length=QUOTE_MAX_LENGTH)
+OptionalQuote = Field(default=None, min_length=QUOTE_MIN_LENGTH, max_length=QUOTE_MAX_LENGTH)
+
+
+class Demand(BaseModel):
+    """Something the sender asks the recipient to do or pay."""
+
+    what: str = Field(max_length=300)
+    amount_text: str | None = Field(default=None, max_length=60)
+    quote: str = Quote
+
+
+class CitedReference(BaseModel):
+    """A law, section, clause or earlier letter the notice relies on."""
+
+    reference: str = Field(max_length=200)
+    quote: str = Quote
+
+
+class DateMention(BaseModel):
+    """A date written in the notice, with what it refers to."""
+
+    kind: DateKind
+    label: str = Field(max_length=200)
+    quote: str = Quote
+
+
+class StatedDeadline(BaseModel):
+    """The period or cut-off date the notice sets for itself."""
+
+    period_days: int | None = Field(default=None, ge=1, le=3650)
+    by_date_quote: str | None = OptionalQuote
+    quote: str | None = OptionalQuote
+
+
+class OptionItem(BaseModel):
+    """One course of action open to the recipient."""
+
+    kind: OptionKind
+    what_it_involves: str = Field(max_length=600)
+    prepare: list[str] = Field(default_factory=list, max_length=8)
+    if_ignored: str = Field(max_length=600)
+
+
+class PlainTerm(BaseModel):
+    """A legal term from the notice, explained in one sentence."""
+
+    term: str = Field(max_length=120)
+    meaning: str = Field(max_length=400)
 
 
 class NoticeExtraction(BaseModel):
-    """The key details extracted from a legal notice."""
-    sender_name: str | None = Field(description="Name of the person or entity sending the notice")
-    recipient_name: str | None = Field(description="Name of the person receiving the notice")
-    dates_found: list[ExtractedDate] = Field(description="All dates mentioned in the notice")
-    demands: list[ExtractedDemand] = Field(description="The specific actions or payments demanded")
-    stated_deadline_days: int | None = Field(description="Number of days given to respond, if stated as a period")
-    stated_deadline_date: str | None = Field(description="Exact date given to respond by, if stated as a date")
+    """Everything the model reads out of a single notice."""
+
+    notice_label: str = Field(max_length=80)
+    summary: str = Field(max_length=3000)
+    sender_role: str = Field(max_length=160)
+    recipient_role: str = Field(max_length=160)
+    demands: list[Demand] = Field(default_factory=list)
+    cited_references: list[CitedReference] = Field(default_factory=list)
+    dates: list[DateMention] = Field(default_factory=list)
+    stated_deadline: StatedDeadline = Field(default_factory=StatedDeadline)
+    options: list[OptionItem] = Field(default_factory=list)
+    documents_to_gather: list[str] = Field(default_factory=list)
+    questions_for_lawyer: list[str] = Field(default_factory=list)
+    plain_terms: list[PlainTerm] = Field(default_factory=list)
 
 
-# ---------------------------------------------------------------------------
-# Cross-Check Extraction
-# ---------------------------------------------------------------------------
+class ClaimCheck(BaseModel):
+    """One claim in the notice, checked against the agreement."""
 
-
-class ClaimExtraction(BaseModel):
-    """A factual claim made by the sender."""
-    claim: str = Field(description="The factual claim made by the sender")
-    quote: str = Field(description="Exact 5-10 word quote from the text stating this claim")
+    claim: str = Field(max_length=400)
+    category: ClaimCategory
+    notice_quote: str = Quote
+    agreement_quote: str | None = OptionalQuote
+    verdict: Verdict
+    explanation: str = Field(max_length=800)
 
 
 class CrossCheckExtraction(BaseModel):
-    """Factual claims that need to be verified by the recipient."""
-    claims_to_verify: list[ClaimExtraction] = Field(
-        description="List of factual claims the recipient should confirm or deny"
-    )
+    """The model's comparison of a notice against the agreement behind it."""
+
+    agreement_summary: str = Field(max_length=2000)
+    claims: list[ClaimCheck] = Field(default_factory=list)
 
 
-# ---------------------------------------------------------------------------
-# Lawyer Questions
-# ---------------------------------------------------------------------------
+class GroundedAnswer(BaseModel):
+    """An answer drawn only from the documents the user supplied."""
 
-
-class QuestionForLawyer(BaseModel):
-    """A drafted question for a lawyer."""
-    question: str = Field(description="The question to ask the lawyer")
-    reasoning: str = Field(description="Why this question is important to ask")
-
-
-class DraftQuestions(BaseModel):
-    """Questions drafted for the user to ask a lawyer."""
-    questions: list[QuestionForLawyer] = Field(description="List of questions to ask the lawyer")
+    answer: str = Field(max_length=2000)
+    supported: bool
+    quotes: list[str] = Field(default_factory=list)
