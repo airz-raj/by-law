@@ -31,6 +31,12 @@ TEMPERATURE = 0.2
 #: a retired id (404), a rate limit (429), or capacity trouble (5xx).
 FAILOVER_STATUS = frozenset({404, 429, 500, 502, 503, 504})
 
+TRUNCATED_INSTRUCTION = (
+    "Your previous answer was cut off before it finished, so it was not valid "
+    "JSON. Answer again, more briefly: keep every required field, but make the "
+    "summary and the explanations shorter."
+)
+
 REPAIR_INSTRUCTION = (
     "Your previous answer did not fit the schema. The validation error was:\n"
     "{error}\n"
@@ -116,12 +122,26 @@ class GeminiLLM:
                 max_output_tokens=max_output_tokens,
                 attempt=attempt,
             )
+            truncated = self._was_truncated(response)
             try:
                 return self._validate(response.parsed, schema)
             except ValidationError as error:
                 last_error = error
-                attempt_prompt = f"{prompt}\n\n{REPAIR_INSTRUCTION.format(error=error)}"
+                instruction = (
+                    TRUNCATED_INSTRUCTION if truncated else REPAIR_INSTRUCTION.format(error=error)
+                )
+                attempt_prompt = f"{prompt}\n\n{instruction}"
+                if truncated:
+                    logger.warning(
+                        "model output was cut off",
+                        extra={"task": task, "max_output_tokens": max_output_tokens},
+                    )
 
+        if truncated:
+            raise LLMOutputInvalid(
+                f"the model's answer was cut off at {max_output_tokens} output tokens, "
+                "twice. Raise MAX_OUTPUT_TOKENS_DECODE, or shorten the document."
+            )
         raise LLMOutputInvalid(f"model output did not fit {schema.__name__}: {last_error}")
 
     async def _call(
@@ -214,6 +234,21 @@ class GeminiLLM:
                 "total_tokens": getattr(usage, "total_token_count", None),
             },
         )
+
+    @staticmethod
+    def _was_truncated(response: types.GenerateContentResponse) -> bool:
+        """Whether the model ran out of output budget mid-answer.
+
+        A truncated answer is invalid JSON, so it fails validation looking
+        exactly like a schema mistake. The two need different fixes, so they
+        are told apart here.
+        """
+        candidates = getattr(response, "candidates", None) or []
+        for candidate in candidates:
+            reason = getattr(candidate, "finish_reason", None)
+            if reason is not None and getattr(reason, "name", str(reason)) == "MAX_TOKENS":
+                return True
+        return False
 
     @staticmethod
     def _validate[T: BaseModel](parsed: object, schema: type[T]) -> T:

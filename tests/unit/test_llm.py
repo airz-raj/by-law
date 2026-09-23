@@ -384,3 +384,100 @@ def test_the_chain_drops_repeats_and_blanks() -> None:
 def test_failover_can_be_turned_off() -> None:
     settings = Settings(gemini_api_key="x", gemini_model="a", gemini_fallback_models="")
     assert settings.model_chain == ("a",)
+
+
+# --- truncation -----------------------------------------------------------
+# A cut-off answer is invalid JSON, so it fails validation looking exactly
+# like a schema mistake. The two need different fixes, so they are told
+# apart and reported differently.
+
+
+class Candidate:
+    """Stands in for one SDK candidate, carrying a finish reason."""
+
+    def __init__(self, reason: str) -> None:
+        self.finish_reason = type("Reason", (), {"name": reason})()
+
+
+def truncated_response() -> FakeResponse:
+    """A response the model ran out of output budget on."""
+    response = FakeResponse(parsed={"wrong_field": 1})
+    response.candidates = [Candidate("MAX_TOKENS")]  # type: ignore[attr-defined]
+    return response
+
+
+async def test_a_cut_off_answer_is_reported_as_cut_off(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def generate(**_: Any) -> FakeResponse:
+        return truncated_response()
+
+    llm, _ = build_llm(settings, monkeypatch, generate)
+    with pytest.raises(LLMOutputInvalid, match="cut off"):
+        await call(llm)
+
+
+async def test_a_cut_off_answer_names_the_budget_that_ran_out(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def generate(**_: Any) -> FakeResponse:
+        return truncated_response()
+
+    llm, _ = build_llm(settings, monkeypatch, generate)
+    with pytest.raises(LLMOutputInvalid, match="100 output tokens"):
+        await call(llm)
+
+
+async def test_a_cut_off_answer_is_asked_to_be_shorter_not_corrected(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Naming a validation error is useless advice when nothing was wrong
+    with the shape; the answer simply did not finish."""
+
+    async def generate(**_: Any) -> FakeResponse:
+        return truncated_response()
+
+    llm, models = build_llm(settings, monkeypatch, generate)
+    with pytest.raises(LLMOutputInvalid):
+        await call(llm)
+    second = models.calls[1]["contents"]
+    assert "cut off" in second
+    assert "shorter" in second
+    assert "did not fit the schema" not in second
+
+
+async def test_a_cut_off_first_answer_can_still_be_repaired(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    attempts = 0
+
+    async def generate(**_: Any) -> FakeResponse:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            return truncated_response()
+        return FakeResponse(parsed={"name": "Jaya"})
+
+    llm, _ = build_llm(settings, monkeypatch, generate)
+    assert (await call(llm)).name == "Jaya"
+
+
+async def test_an_answer_that_finished_is_not_called_cut_off(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def generate(**_: Any) -> FakeResponse:
+        response = FakeResponse(parsed={"wrong_field": 1})
+        response.candidates = [Candidate("STOP")]  # type: ignore[attr-defined]
+        return response
+
+    llm, _ = build_llm(settings, monkeypatch, generate)
+    with pytest.raises(LLMOutputInvalid, match="did not fit"):
+        await call(llm)
+
+
+def test_the_output_budget_leaves_room_for_reasoning_tokens() -> None:
+    """The newer models spend thinking tokens from the same budget, so a
+    cap that only just fits the answer truncates it."""
+    settings = Settings(gemini_api_key="x")
+    assert settings.max_output_tokens_decode >= 8192
+    assert settings.max_output_tokens_cross_check >= 8192

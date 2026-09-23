@@ -57,9 +57,13 @@ class Settings(BaseSettings):
     max_claims: int = 10
     max_grounded_quotes: int = 3
 
-    max_output_tokens_decode: int = 4096
-    max_output_tokens_cross_check: int = 4096
-    max_output_tokens_ask: int = 1024
+    # Generous, because the newer Gemini models spend reasoning tokens from
+    # this same budget. A cap that only just fits the answer gets truncated
+    # mid-JSON, which fails validation rather than arriving short. Unused
+    # headroom costs nothing: billing follows the tokens actually produced.
+    max_output_tokens_decode: int = 16384
+    max_output_tokens_cross_check: int = 16384
+    max_output_tokens_ask: int = 4096
 
     @property
     def model_chain(self) -> tuple[str, ...]:
