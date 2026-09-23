@@ -68,6 +68,8 @@ class GeminiLLM:
                 AI Studio key, and supplies the model id and timeout.
         """
         self._settings = settings
+        #: The model that answered the most recent call, for diagnostics.
+        self.last_model: str | None = None
         if settings.llm_backend == "vertex":
             self.client = genai.Client(
                 vertexai=True,
@@ -170,6 +172,7 @@ class GeminiLLM:
                 last = error
                 self._log_failover(task=task, model=model, reason="unreachable")
             else:
+                self.last_model = model
                 self._log_usage(
                     task=task, attempt=attempt, started=started, response=response, model=model
                 )

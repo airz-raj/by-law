@@ -21,6 +21,7 @@ the document. It exits non-zero if the confirmation rate falls below
 from __future__ import annotations
 
 import asyncio
+import logging
 import sys
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -30,6 +31,7 @@ from app.adapters.llm import GeminiLLM
 from app.api.dependencies import get_rulebook
 from app.config import Settings
 from app.core.models import Language
+from app.observability import configure_logging
 from app.services import pipeline
 from app.services.prompts import ReadingLevel
 
@@ -60,6 +62,7 @@ class Outcome:
     confirmed: int
     total: int
     screening: tuple[str, ...]
+    model: str | None = None
     error: str | None = None
 
     @property
@@ -90,7 +93,13 @@ def count_receipts(report: object) -> tuple[int, int]:
     return sum(1 for receipt in receipts if receipt.found), len(receipts)
 
 
-async def run_sample(name: str, expected: str | None, settings: Settings) -> Outcome:
+async def run_sample(
+    name: str,
+    expected: str | None,
+    settings: Settings,
+    llm: GeminiLLM,
+    cache: TTLCache,
+) -> Outcome:
     """Decode one sample against the real model."""
     today = datetime.now(UTC).date()
     try:
@@ -99,15 +108,16 @@ async def run_sample(name: str, expected: str | None, settings: Settings) -> Out
             receipt_date=today - timedelta(days=3),
             language=Language.EN,
             reading_level=ReadingLevel.SIMPLE,
-            llm=GeminiLLM(settings),
-            cache=TTLCache(settings),
+            llm=llm,
+            cache=cache,
             rules=get_rulebook(),
             today=today,
             settings=settings,
             request_id=f"smoke-{name}",
         )
     except Exception as error:  # The report is the point here, not a traceback.
-        return Outcome(name, expected, None, None, 0, 0, (), error=f"{type(error).__name__}")
+        detail = str(error) or type(error).__name__
+        return Outcome(name, expected, None, None, 0, 0, (), error=detail)
 
     confirmed, total = count_receipts(report)
     return Outcome(
@@ -118,6 +128,7 @@ async def run_sample(name: str, expected: str | None, settings: Settings) -> Out
         confirmed=confirmed,
         total=total,
         screening=tuple(report.screening.ai_directed),
+        model=llm.last_model,
     )
 
 
@@ -131,6 +142,7 @@ def describe(outcome: Outcome) -> str:
     rule = outcome.matched_rule or "no rule matched"
     return (
         f"  {rule_mark} {outcome.name}\n"
+        f"      answered by {outcome.model or 'unknown'}\n"
         f"      rule       {rule}\n"
         f"      respond by {outcome.respond_by or 'not established'}\n"
         f"      quotes     {quote_mark} {outcome.confirmed}/{outcome.total} "
@@ -141,11 +153,20 @@ def describe(outcome: Outcome) -> str:
 
 async def main() -> int:
     """Run every sample and report. Returns the process exit code."""
+    # The app configures JSON logging inside create_app, which this script
+    # does not call. Without it the failover warnings print their message
+    # and drop the model and reason, which are the useful parts.
+    configure_logging("WARNING")
+    logging.getLogger("google_genai").setLevel(logging.ERROR)
+
     settings = Settings()
     print(f"Model chain: {' -> '.join(settings.model_chain)}")
     print(f"Backend:     {settings.llm_backend}\n")
 
-    outcomes = [await run_sample(name, rule, settings) for name, rule in SAMPLES]
+    # One client and one cache across the samples, as the running app has.
+    llm = GeminiLLM(settings)
+    cache = TTLCache(settings)
+    outcomes = [await run_sample(name, rule, settings, llm, cache) for name, rule in SAMPLES]
     for outcome in outcomes:
         print(describe(outcome))
         print()
