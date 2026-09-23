@@ -167,7 +167,7 @@ commands in [Tests and checks](#tests-and-checks).
 | `pip-audit` and `npm audit` | 0 known vulnerabilities |
 | First-visit transfer, gzipped | 31.7 KB (page, 4 stylesheets, 16 modules, one language file) |
 | Repository size | 254 KiB packed |
-| Python source | 34 modules, 4,158 lines |
+| Python source | 34 modules, 4,193 lines |
 | Browser source | 16 modules, 1,972 lines |
 
 Not measured, because nothing is deployed yet: live request latency, cache-hit
