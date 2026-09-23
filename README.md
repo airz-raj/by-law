@@ -189,9 +189,10 @@ Requires Python 3.12 and Node 22 or later (Node is used only for the web tests).
 ```bash
 git clone https://github.com/airz-raj/by-law.git
 cd by-law
-python3.12 -m venv .venv && source .venv/bin/activate
+python3.12 -m venv .venv
 make install            # runtime and development dependencies
 cp .env.example .env    # add a Gemini API key from Google AI Studio
+                        # every make target uses .venv automatically
 make dev                # http://localhost:8080
 ```
 
