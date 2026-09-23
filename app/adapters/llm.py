@@ -26,6 +26,11 @@ from app.observability import get_logger
 
 TEMPERATURE = 0.2
 
+#: Status codes that mean "this model cannot answer right now" rather than
+#: "this request is wrong". Only these are worth trying another model for:
+#: a retired id (404), a rate limit (429), or capacity trouble (5xx).
+FAILOVER_STATUS = frozenset({404, 429, 500, 502, 503, 504})
+
 REPAIR_INSTRUCTION = (
     "Your previous answer did not fit the schema. The validation error was:\n"
     "{error}\n"
@@ -135,28 +140,53 @@ class GeminiLLM:
             temperature=TEMPERATURE,
             max_output_tokens=max_output_tokens,
         )
-        started = time.monotonic()
-        try:
-            response = await asyncio.wait_for(
-                self.client.aio.models.generate_content(
-                    model=self._settings.gemini_model,
-                    contents=prompt,
-                    config=config,
-                ),
-                timeout=self._settings.llm_timeout_seconds,
-            )
-        except TimeoutError as error:
-            raise LLMUnavailable(f"the model did not answer {task} in time") from error
-        except APIError as error:
-            raise LLMUnavailable(f"the model backend refused {task}") from error
-        except Exception as error:
-            # The SDK raises httpx errors, which inherit from neither OSError
-            # nor RuntimeError, so narrowing here would let a real outage
-            # surface as an unhandled 500 instead of a 503.
-            raise LLMUnavailable(f"the model backend was unreachable for {task}") from error
+        chain = self._settings.model_chain
+        last: Exception | None = None
 
-        self._log_usage(task=task, attempt=attempt, started=started, response=response)
-        return response
+        for position, model in enumerate(chain):
+            started = time.monotonic()
+            try:
+                response = await asyncio.wait_for(
+                    self.client.aio.models.generate_content(
+                        model=model, contents=prompt, config=config
+                    ),
+                    timeout=self._settings.llm_timeout_seconds,
+                )
+            except TimeoutError as error:
+                last = error
+                self._log_failover(task=task, model=model, reason="timeout")
+            except APIError as error:
+                last = error
+                status = getattr(error, "code", None)
+                if status not in FAILOVER_STATUS:
+                    # A bad key or a malformed request fails the same way on
+                    # every model, so trying the next one only wastes time.
+                    raise LLMUnavailable(f"the model backend refused {task}") from error
+                self._log_failover(task=task, model=model, reason=f"status_{status}")
+            except Exception as error:
+                # The SDK raises httpx errors, which inherit from neither
+                # OSError nor RuntimeError, so narrowing here would let a real
+                # outage surface as an unhandled 500 instead of a 503.
+                last = error
+                self._log_failover(task=task, model=model, reason="unreachable")
+            else:
+                self._log_usage(
+                    task=task, attempt=attempt, started=started, response=response, model=model
+                )
+                if position:
+                    logger.warning(
+                        "answered by a fallback model",
+                        extra={"task": task, "model": model, "position": position},
+                    )
+                return response
+
+        raise LLMUnavailable(f"no model could answer {task} ({len(chain)} tried)") from last
+
+    def _log_failover(self, *, task: str, model: str, reason: str) -> None:
+        """Record that a model could not answer, before trying the next."""
+        logger.warning(
+            "model could not answer", extra={"task": task, "model": model, "reason": reason}
+        )
 
     def _log_usage(
         self,
@@ -165,6 +195,7 @@ class GeminiLLM:
         attempt: int,
         started: float,
         response: types.GenerateContentResponse,
+        model: str,
     ) -> None:
         """Record timing and token counts, never content."""
         usage = response.usage_metadata
@@ -172,7 +203,7 @@ class GeminiLLM:
             "llm call",
             extra={
                 "task": task,
-                "model": self._settings.gemini_model,
+                "model": model,
                 "attempt": attempt,
                 "latency_ms": round((time.monotonic() - started) * 1000),
                 "prompt_tokens": getattr(usage, "prompt_token_count", None),

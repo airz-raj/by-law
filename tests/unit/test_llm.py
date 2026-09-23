@@ -53,12 +53,34 @@ class FakeModels:
 
 @pytest.fixture
 def settings() -> Settings:
+    """One model, so a test exercises the call rather than the chain."""
     return Settings(
         llm_backend="aistudio",
         gemini_api_key="not-a-real-key",
         gemini_model="gemini-flash-test",
+        gemini_fallback_models="",
         llm_timeout_seconds=0.25,
     )
+
+
+@pytest.fixture
+def chained() -> Settings:
+    """Three models, to exercise failover."""
+    return Settings(
+        llm_backend="aistudio",
+        gemini_api_key="not-a-real-key",
+        gemini_model="first-model",
+        gemini_fallback_models="second-model, third-model",
+        llm_timeout_seconds=0.25,
+    )
+
+
+class FakeAPIError(Exception):
+    """Stands in for the SDK's APIError, which carries an HTTP code."""
+
+    def __init__(self, code: int) -> None:
+        super().__init__(f"status {code}")
+        self.code = code
 
 
 def build_llm(
@@ -111,20 +133,17 @@ async def test_a_timeout_is_reported_as_unavailable(
         return FakeResponse()
 
     llm, _ = build_llm(settings, monkeypatch, generate)
-    with pytest.raises(LLMUnavailable, match="in time"):
+    with pytest.raises(LLMUnavailable, match="no model could answer"):
         await call(llm)
 
 
 async def test_a_backend_error_is_reported_as_unavailable(
     settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    class FakeAPIError(Exception):
-        pass
-
     monkeypatch.setattr("app.adapters.llm.APIError", FakeAPIError)
 
     async def generate(**_: Any) -> FakeResponse:
-        raise FakeAPIError
+        raise FakeAPIError(401)
 
     llm, _ = build_llm(settings, monkeypatch, generate)
     with pytest.raises(LLMUnavailable, match="refused"):
@@ -138,7 +157,7 @@ async def test_a_transport_error_is_reported_as_unavailable(
         raise OSError("connection reset")
 
     llm, _ = build_llm(settings, monkeypatch, generate)
-    with pytest.raises(LLMUnavailable, match="unreachable"):
+    with pytest.raises(LLMUnavailable, match="no model could answer"):
         await call(llm)
 
 
@@ -257,3 +276,111 @@ def test_the_aistudio_backend_uses_the_api_key(monkeypatch: pytest.MonkeyPatch) 
     GeminiLLM(Settings(llm_backend="aistudio", gemini_api_key="not-a-real-key"))
     assert captured["api_key"] == "not-a-real-key"
     assert "vertexai" not in captured
+
+
+# --- failover -------------------------------------------------------------
+# gemini-2.0-flash was retired while this project was being built, and the
+# only symptom was a generic outage message. A model that cannot answer
+# should cost a fallback, not the product.
+
+
+@pytest.mark.parametrize("status", [404, 429, 500, 502, 503, 504])
+async def test_a_model_that_cannot_answer_costs_a_fallback(
+    chained: Settings, monkeypatch: pytest.MonkeyPatch, status: int
+) -> None:
+    monkeypatch.setattr("app.adapters.llm.APIError", FakeAPIError)
+    tried: list[str] = []
+
+    async def generate(*, model: str, **_: Any) -> FakeResponse:
+        tried.append(model)
+        if model == "first-model":
+            raise FakeAPIError(status)
+        return FakeResponse(parsed=Answer(name="Farah"))
+
+    llm, _ = build_llm(chained, monkeypatch, generate)
+    assert (await call(llm)).name == "Farah"
+    assert tried == ["first-model", "second-model"]
+
+
+@pytest.mark.parametrize("status", [400, 401, 403])
+async def test_a_request_the_backend_rejects_is_not_retried_elsewhere(
+    chained: Settings, monkeypatch: pytest.MonkeyPatch, status: int
+) -> None:
+    """A bad key or a malformed request fails the same way on every model."""
+    monkeypatch.setattr("app.adapters.llm.APIError", FakeAPIError)
+    tried: list[str] = []
+
+    async def generate(*, model: str, **_: Any) -> FakeResponse:
+        tried.append(model)
+        raise FakeAPIError(status)
+
+    llm, _ = build_llm(chained, monkeypatch, generate)
+    with pytest.raises(LLMUnavailable, match="refused"):
+        await call(llm)
+    assert tried == ["first-model"]
+
+
+async def test_a_retired_primary_model_does_not_take_the_product_down(
+    chained: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.adapters.llm.APIError", FakeAPIError)
+
+    async def generate(*, model: str, **_: Any) -> FakeResponse:
+        if model in {"first-model", "second-model"}:
+            raise FakeAPIError(404)
+        return FakeResponse(parsed=Answer(name="Gita"))
+
+    llm, _ = build_llm(chained, monkeypatch, generate)
+    assert (await call(llm)).name == "Gita"
+
+
+async def test_the_whole_chain_failing_is_reported_as_unavailable(
+    chained: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("app.adapters.llm.APIError", FakeAPIError)
+    tried: list[str] = []
+
+    async def generate(*, model: str, **_: Any) -> FakeResponse:
+        tried.append(model)
+        raise FakeAPIError(503)
+
+    llm, _ = build_llm(chained, monkeypatch, generate)
+    with pytest.raises(LLMUnavailable, match="3 tried"):
+        await call(llm)
+    assert tried == ["first-model", "second-model", "third-model"]
+
+
+async def test_a_timeout_on_one_model_moves_to_the_next(
+    chained: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def generate(*, model: str, **_: Any) -> FakeResponse:
+        if model == "first-model":
+            await asyncio.sleep(5)
+        return FakeResponse(parsed=Answer(name="Hema"))
+
+    llm, _ = build_llm(chained, monkeypatch, generate)
+    assert (await call(llm)).name == "Hema"
+
+
+async def test_the_first_model_is_preferred_when_it_answers(
+    chained: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tried: list[str] = []
+
+    async def generate(*, model: str, **_: Any) -> FakeResponse:
+        tried.append(model)
+        return FakeResponse(parsed=Answer(name="Ira"))
+
+    llm, _ = build_llm(chained, monkeypatch, generate)
+    await call(llm)
+    assert tried == ["first-model"]
+
+
+def test_the_chain_drops_repeats_and_blanks() -> None:
+    settings = Settings(gemini_api_key="x", gemini_model="a", gemini_fallback_models=" b , a ,, c ")
+    assert settings.model_chain == ("a", "b", "c")
+
+
+def test_failover_can_be_turned_off() -> None:
+    settings = Settings(gemini_api_key="x", gemini_model="a", gemini_fallback_models="")
+    assert settings.model_chain == ("a",)

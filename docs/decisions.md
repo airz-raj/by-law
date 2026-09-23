@@ -22,6 +22,8 @@ build went, not afterwards.
 | 2026-09-22 | Screening signals are grouped objects, not two parallel lists | The previous shape needed a list of patterns and a list of codes to stay in the same order. The planted line in the vacate sample was not caught by the old patterns |
 | 2026-09-22 | Model fixtures are hand-written, not recorded from Gemini | `generativelanguage.googleapis.com` is not reachable from the build environment. Every quote in every fixture was checked to resolve against the masked sample before being committed, and no claim is made anywhere that they were recorded live |
 | 2026-09-22 | Rule sources cite the India Code page for the Act | Each of the three URLs was fetched and confirmed to be the right Act. India Code disallows automated fetching of its section pages, so the section text itself was not machine-diffed — see the note below |
+| 2026-09-23 | The model is a chain, not an id | `gemini-2.0-flash` was retired mid-build and `gemini-flash-latest` then returned `503 UNAVAILABLE — high demand` for an afternoon. Both took the whole product down with a generic outage message. A retired (404), rate-limited (429) or overloaded (5xx) model now costs a fallback; a rejected request (400/401/403) fails at once, because it would fail identically on every model |
+| 2026-09-23 | `scripts/smoke.py`, outside the specified layout | Every other test runs against a fake, which leaves the prompts themselves unproven. This is the only check that calls the real model, so it is a separate target rather than part of `make test`, and it is excluded from the container image |
 
 ## Still to be checked by a person
 

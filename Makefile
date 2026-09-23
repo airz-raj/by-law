@@ -1,4 +1,4 @@
-.PHONY: install dev lint format typecheck security test webtest check
+.PHONY: install dev lint format typecheck security test webtest smoke check
 
 install:
 	pip install -r requirements-dev.txt
@@ -27,5 +27,8 @@ test:
 webtest:
 	npx vitest run --reporter=verbose
 	npx tsc --noEmit
+
+smoke:
+	python -m scripts.smoke
 
 check: lint typecheck security test webtest

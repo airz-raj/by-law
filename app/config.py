@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # answering". Pin an exact id here or in .env when a build needs to be
     # reproducible.
     gemini_model: str = "gemini-flash-latest"
+
+    # Tried in order when the model above is retired, overloaded or rate
+    # limited. A comma-separated list; empty disables failover.
+    gemini_fallback_models: str = "gemini-3.8-flash,gemini-2.5-flash"
     gcp_project: str | None = None
     gcp_location: str | None = None
 
@@ -56,6 +60,17 @@ class Settings(BaseSettings):
     max_output_tokens_decode: int = 4096
     max_output_tokens_cross_check: int = 4096
     max_output_tokens_ask: int = 1024
+
+    @property
+    def model_chain(self) -> tuple[str, ...]:
+        """The models to try, in order, without repeats."""
+        candidates = [self.gemini_model, *self.gemini_fallback_models.split(",")]
+        seen: dict[str, None] = {}
+        for candidate in candidates:
+            name = candidate.strip()
+            if name:
+                seen.setdefault(name, None)
+        return tuple(seen)
 
     @model_validator(mode="after")
     def _check_backend_is_configured(self) -> Self:

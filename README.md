@@ -146,7 +146,7 @@ mohlat/
 |---|---|---|
 | Code quality | Typed throughout and checked with `mypy --strict`; ruff for lint and format; a pure domain core; a port for the model; enums for every categorical field; versioned prompts; small single-purpose modules | `pyproject.toml`, `app/core/`, `app/adapters/llm.py`, `tests/unit/test_architecture.py` |
 | Security | Personal numbers masked before model calls; files validated by magic bytes, size, page count and text length, with PDF extraction stopping at the text limit rather than expanding a compressed file in full; request bodies cut off at the limit whether or not they declare a length; documents delimited and screened for injected instructions; model output validated against schemas; the browser builds the page with `textContent` only; strict Content-Security-Policy and security headers; per-client rate limits keyed on the proxy-supplied end of `X-Forwarded-For`, not the caller-supplied end; RFC 9457 error responses with no internals; no API key needed in production when Vertex AI is used through the service identity; non-root container; `bandit` and `pip-audit` in CI | `app/core/redaction.py`, `app/adapters/extract.py`, `app/core/screening.py`, `app/security/`, `web/js/dom.js`, `Dockerfile`, `.github/workflows/ci.yml` |
-| Efficiency | One model call per user action, plus at most one repair attempt when the answer does not fit the schema; deterministic work before and after it; a content-hash cache with expiry for repeated requests; bounded output tokens; PDF parsing loaded only when a PDF arrives; no front-end framework or build step; gzip; Cloud Run scales to zero | `app/services/pipeline.py`, `app/adapters/cache.py`, `app/adapters/extract.py`, `web/` |
+| Efficiency | One model call per user action, plus at most one repair attempt when the answer does not fit the schema, and a fallback model only when one cannot answer at all; deterministic work before and after it; a content-hash cache with expiry for repeated requests; bounded output tokens; PDF parsing loaded only when a PDF arrives; no front-end framework or build step; gzip; Cloud Run scales to zero | `app/services/pipeline.py`, `app/adapters/cache.py`, `app/adapters/extract.py`, `web/` |
 | Testing | Table-driven unit tests for every core rule (month ends, leap years, missing receipt dates, fabricated quotes, checksum-invalid IDs); API integration tests against a fake model; accessibility tests with axe-core; a coverage gate in CI; no network in any test | `tests/`, `Makefile`, `.github/workflows/ci.yml` |
 | Accessibility | Semantic landmarks, skip link, labelled controls with hints, an error summary, live progress updates, focus moved to results, visible focus, text and shape (never colour alone) for every status, Hindi marked with `lang="hi"`, reduced-motion support, usable at 320 px width and 400 % zoom, print stylesheet, read-aloud where the browser supports it | `web/index.html`, `web/css/`, `web/js/`, `tests/web/` |
 | Problem-statement alignment | Every use case in the brief maps to a working feature | [What Mohlat does](#what-mohlat-does) |
@@ -158,16 +158,16 @@ commands in [Tests and checks](#tests-and-checks).
 
 | Measure | Result |
 |---|---|
-| Python tests | 398 passing (303 unit, 95 integration) |
-| Python coverage | 97.9% overall, 98.0% for `app/core` (gate: 90%) |
+| Python tests | 413 passing (318 unit, 95 integration) |
+| Python coverage | 98.0% overall, 98.0% for `app/core` (gate: 90%) |
 | Browser tests | 311 passing |
 | axe-core violations | 0, on both the intake and the report state |
-| `mypy --strict` | clean, 33 modules |
+| `mypy --strict` | clean, 34 modules |
 | `tsc --noEmit` with `strict` and `checkJs` | clean, 16 modules |
 | `pip-audit` and `npm audit` | 0 known vulnerabilities |
 | First-visit transfer, gzipped | 31.7 KB (page, 4 stylesheets, 16 modules, one language file) |
 | Repository size | 254 KiB packed |
-| Python source | 33 modules, 3,967 lines |
+| Python source | 34 modules, 4,158 lines |
 | Browser source | 16 modules, 1,972 lines |
 
 Not measured, because nothing is deployed yet: live request latency, cache-hit
@@ -201,7 +201,15 @@ make dev                # http://localhost:8080
 make test      # pytest with the coverage gate
 make webtest   # vitest, axe-core and type checks for the browser code
 make check     # everything CI runs: lint, format, types, security, tests
+make smoke     # the samples against the real model; costs calls, not in CI
 ```
+
+`make smoke` is the one check that leaves the machine. It runs each sample
+notice through Gemini and reports which model answered, whether the rulebook
+matched, and how many of the model's quotes could be confirmed word for word in
+the source. It fails if fewer than 80 % confirm, because receipts are the
+product's central claim and a report whose receipts nearly all say "not found"
+is worse than no report.
 
 ## Deploy
 
@@ -213,7 +221,8 @@ make check     # everything CI runs: lint, format, types, security, tests
 |---|---|---|
 | `LLM_BACKEND` | `aistudio` (API key) or `vertex` (service identity) | `aistudio` |
 | `GEMINI_API_KEY` | AI Studio key for local development | none |
-| `GEMINI_MODEL` | Gemini Flash-tier model id | set in `.env.example` |
+| `GEMINI_MODEL` | Gemini Flash-tier model id, or the `gemini-flash-latest` alias | set in `.env.example` |
+| `GEMINI_FALLBACK_MODELS` | Tried in order when the model above is retired, rate limited or overloaded | set in `.env.example` |
 | `GCP_PROJECT`, `GCP_LOCATION` | Vertex AI project and location | none |
 | `APP_ENV` | `dev` or `prod`; `prod` turns off the interactive API docs | `dev` |
 | `TRUST_PROXY` | Read the client address from `X-Forwarded-For` (set `true` on Cloud Run) | `false` |

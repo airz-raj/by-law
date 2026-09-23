@@ -119,7 +119,7 @@ async def _generate[T: (NoticeExtraction, CrossCheckExtraction, GroundedAnswer)]
     """
     key = TTLCache.key(
         prompt_version=prompts.PROMPT_VERSION,
-        model=settings.gemini_model,
+        model=",".join(settings.model_chain),
         task=task,
         texts=texts,
         options=options,

@@ -13,6 +13,7 @@ htmlcov
 node_modules
 tests
 docs
+scripts
 *.md
 *.toml
 Makefile
