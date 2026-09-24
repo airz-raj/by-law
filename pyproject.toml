@@ -4,6 +4,15 @@ version = "1.0.0"
 description = "Understand your legal notice and the date you need to act by"
 requires-python = ">=3.12"
 license = "MIT"
+dependencies = [
+    "fastapi==0.141.1",
+    "starlette==1.6.0",
+    "uvicorn==0.53.0",
+    "pydantic-settings==2.15.0",
+    "python-multipart==0.0.32",
+    "google-genai==2.24.0",
+    "pypdf==6.19.0"
+]
 
 [tool.ruff]
 line-length = 100
