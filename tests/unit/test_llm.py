@@ -140,7 +140,7 @@ async def test_a_timeout_is_reported_as_unavailable(
 async def test_a_backend_error_is_reported_as_unavailable(
     settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("app.adapters.llm.APIError", FakeAPIError)
+    monkeypatch.setattr("google.genai.errors.APIError", FakeAPIError)
 
     async def generate(**_: Any) -> FakeResponse:
         raise FakeAPIError(401)
@@ -288,7 +288,7 @@ def test_the_aistudio_backend_uses_the_api_key(monkeypatch: pytest.MonkeyPatch) 
 async def test_a_model_that_cannot_answer_costs_a_fallback(
     chained: Settings, monkeypatch: pytest.MonkeyPatch, status: int
 ) -> None:
-    monkeypatch.setattr("app.adapters.llm.APIError", FakeAPIError)
+    monkeypatch.setattr("google.genai.errors.APIError", FakeAPIError)
     tried: list[str] = []
 
     async def generate(*, model: str, **_: Any) -> FakeResponse:
@@ -307,7 +307,7 @@ async def test_a_request_the_backend_rejects_is_not_retried_elsewhere(
     chained: Settings, monkeypatch: pytest.MonkeyPatch, status: int
 ) -> None:
     """A bad key or a malformed request fails the same way on every model."""
-    monkeypatch.setattr("app.adapters.llm.APIError", FakeAPIError)
+    monkeypatch.setattr("google.genai.errors.APIError", FakeAPIError)
     tried: list[str] = []
 
     async def generate(*, model: str, **_: Any) -> FakeResponse:
@@ -323,7 +323,7 @@ async def test_a_request_the_backend_rejects_is_not_retried_elsewhere(
 async def test_a_retired_primary_model_does_not_take_the_product_down(
     chained: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("app.adapters.llm.APIError", FakeAPIError)
+    monkeypatch.setattr("google.genai.errors.APIError", FakeAPIError)
 
     async def generate(*, model: str, **_: Any) -> FakeResponse:
         if model in {"first-model", "second-model"}:
@@ -337,7 +337,7 @@ async def test_a_retired_primary_model_does_not_take_the_product_down(
 async def test_the_whole_chain_failing_is_reported_as_unavailable(
     chained: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("app.adapters.llm.APIError", FakeAPIError)
+    monkeypatch.setattr("google.genai.errors.APIError", FakeAPIError)
     tried: list[str] = []
 
     async def generate(*, model: str, **_: Any) -> FakeResponse:

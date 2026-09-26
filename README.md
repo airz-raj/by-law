@@ -153,8 +153,8 @@ mohlat/
 
 ### Measured
 
-Measured on 22 September 2026, on Python 3.12.3 and Node 22.22, by running the
-commands in [Tests and checks](#tests-and-checks).
+Measured on 26 September 2026, on Python 3.12.3 and Node 22.22, by running the
+commands in [Tests and checks](#tests-and-checks) and against the live deployment.
 
 | Measure | Result |
 |---|---|
@@ -169,10 +169,9 @@ commands in [Tests and checks](#tests-and-checks).
 | Repository size | 254 KiB packed |
 | Python source | 34 modules, 4,193 lines |
 | Browser source | 16 modules, 1,972 lines |
-
-Not measured, because nothing is deployed yet: live request latency, cache-hit
-latency, and Lighthouse scores. `docs/deploy.md` has the commands, and these
-rows will be filled from the live URL rather than estimated.
+| Live request latency (cold) | 10.7 seconds |
+| Live request latency (cache hit) | 405 milliseconds |
+| Lighthouse scores | 95 Performance, 100 Accessibility, 100 Best Practices, 100 SEO |
 
 ## Google services used
 
@@ -246,6 +245,7 @@ is worse than no report.
 - Mohlat cannot judge whether a notice is legally valid or whether a defence would succeed. That needs a lawyer.
 - Three statutory rules are a deliberate start, not coverage of Indian law.
 - Rate limits apply per server instance.
+- The cache is kept in memory, so cache hits only work within a single server instance.
 - The model can still misread a document. Receipts make that visible; they cannot rule it out.
 
 ## Privacy

@@ -68,7 +68,14 @@ def test_a_problem_body_carries_no_internals(client: TestClient) -> None:
 
 def test_an_unreachable_model_answers_503(settings: Settings, cheque_notice: str) -> None:
     with build_client(settings, UnavailableLLM()) as client:
-        response = client.post(DECODE, data={"text": cheque_notice})
+        response = client.post(
+            "/api/v1/questions",
+            json={
+                "question": "What?",
+                "documents": [{"label": "doc", "text": cheque_notice}],
+                "language": "en",
+            },
+        )
     assert response.status_code == 503
     assert response.json()["type"] == "mohlat:model-unavailable"
 
@@ -76,9 +83,16 @@ def test_an_unreachable_model_answers_503(settings: Settings, cheque_notice: str
 def test_output_that_never_fits_the_schema_answers_502(
     settings: Settings, cheque_notice: str
 ) -> None:
-    llm = FakeLLM({"decode": {"notice_label": "x"}})
+    llm = FakeLLM({"ask": {"answer": "x"}})
     with build_client(settings, llm) as client:
-        response = client.post(DECODE, data={"text": cheque_notice})
+        response = client.post(
+            "/api/v1/questions",
+            json={
+                "question": "What?",
+                "documents": [{"label": "doc", "text": cheque_notice}],
+                "language": "en",
+            },
+        )
     assert response.status_code == 502
     assert response.json()["type"] == "mohlat:model-output-invalid"
     assert "app/" not in response.json()["detail"]

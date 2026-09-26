@@ -17,6 +17,10 @@ htmlcov/
 # Node
 node_modules/
 
+# Working docs
+next_steps.md
+
 # OS
 .DS_Store
 .vercel
+next_steps.md

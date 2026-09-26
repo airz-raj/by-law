@@ -36,6 +36,7 @@ from app.api.schemas import (
 from app.config import Settings
 from app.core import dates, deadlines, evidence, redaction, rulebook, screening
 from app.core.models import Language, Receipt, Rule, Rulebook
+from app.errors import LLMOutputInvalid, LLMUnavailable
 from app.services import prompts
 from app.services.llm_schemas import (
     ClaimCheck,
@@ -249,44 +250,49 @@ async def decode_notice(
             schema=NoticeExtraction,
             max_output_tokens=settings.max_output_tokens_decode,
         )
-    except Exception: # Also catch general exceptions just in case since they never saw it work
+    except (LLMUnavailable, LLMOutputInvalid):
         logger.warning("LLM unavailable in decode_notice, falling back to local parsing.")
         cache_hit = False
         from app.core import dates
-        
+
         fallback_dates = dates.find_dates(safe_text)
-        from app.services.llm_schemas import DateMention, DateKind
-        
+        from app.services.llm_schemas import DateKind, DateMention
+
         date_mentions = []
         if fallback_dates:
             date_mentions.append(
                 DateMention(
-                    kind=DateKind.NOTICE_DATE,
-                    label="Date on notice",
-                    quote=fallback_dates[0].raw
+                    kind=DateKind.NOTICE_DATE, label="Date on notice", quote=fallback_dates[0].raw
                 )
             )
-            
+
         fallback_summary = (
-            "The AI service is temporarily unavailable (rate limited). We have scanned this document "
-            "locally to find the date and applied our standard rulebook as a fallback."
-        ) if language == Language.EN else (
-            "एआई सेवा अस्थायी रूप से अनुपलब्ध है। हमने तारीख खोजने और अपने मानक नियमों "
-            "को लागू करने के लिए इस दस्तावेज़ को स्थानीय रूप से स्कैन किया है।"
+            (
+                "The AI service is temporarily unavailable (rate limited). We "
+                "have scanned this document "
+                "locally to find the date and applied our standard rulebook as a fallback."
+            )
+            if language == Language.EN
+            else (
+                "एआई सेवा अस्थायी रूप से अनुपलब्ध है। हमने तारीख खोजने और अपने मानक नियमों "
+                "को लागू करने के लिए इस दस्तावेज़ को स्थानीय रूप से स्कैन किया है।"
+            )
         )
-        
+
         best_rule_id = ""
         lowered = safe_text.lower()
         import re
+
         for r in rules.rules:
             matched = tuple(
-                term for term in r.trigger_terms
+                term
+                for term in r.trigger_terms
                 if re.search(rf"\b{re.escape(term.lower())}(?:\b|(?=\W)|$)", lowered)
             )
             if len(matched) >= r.min_trigger_hits:
                 best_rule_id = r.id
                 break
-                
+
         extraction = NoticeExtraction(
             notice_label=best_rule_id,
             summary=fallback_summary,

@@ -61,8 +61,8 @@ class Settings(BaseSettings):
     # this same budget. A cap that only just fits the answer gets truncated
     # mid-JSON, which fails validation rather than arriving short. Unused
     # headroom costs nothing: billing follows the tokens actually produced.
-    max_output_tokens_decode: int = 16384
-    max_output_tokens_cross_check: int = 16384
+    max_output_tokens_decode: int = 8192
+    max_output_tokens_cross_check: int = 8192
     max_output_tokens_ask: int = 4096
 
     @property

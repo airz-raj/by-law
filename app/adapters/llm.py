@@ -13,12 +13,12 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from google import genai
-from google.genai import types
-from google.genai.errors import APIError
 from pydantic import BaseModel, ValidationError
+
+if TYPE_CHECKING:
+    from google.genai import types
 
 from app.config import Settings
 from app.errors import LLMOutputInvalid, LLMUnavailable
@@ -73,6 +73,8 @@ class GeminiLLM:
             settings: Chooses Vertex AI through the service identity or an
                 AI Studio key, and supplies the model id and timeout.
         """
+        from google import genai
+
         self._settings = settings
         #: The model that answered the most recent call, for diagnostics.
         self.last_model: str | None = None
@@ -155,6 +157,9 @@ class GeminiLLM:
         attempt: int,
     ) -> types.GenerateContentResponse:
         """Make one SDK call, turning every transport failure into LLMUnavailable."""
+        from google.genai import types
+        from google.genai.errors import APIError
+
         config = types.GenerateContentConfig(
             system_instruction=system,
             response_mime_type="application/json",

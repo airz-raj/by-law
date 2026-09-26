@@ -97,8 +97,14 @@ def _mount_web(app: FastAPI) -> None:
             app.mount(f"/{name}", StaticFiles(directory=directory), name=name)
 
     index = WEB_ROOT / "index.html"
+    security_txt = WEB_ROOT / ".well-known" / "security.txt"
 
     @app.get("/", include_in_schema=False)
     async def page() -> FileResponse:
         """Serve the single page."""
         return FileResponse(index, media_type="text/html")
+
+    @app.get("/.well-known/security.txt", include_in_schema=False)
+    async def security_policy() -> FileResponse:
+        """Serve the security policy."""
+        return FileResponse(security_txt, media_type="text/plain")

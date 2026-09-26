@@ -24,6 +24,7 @@ CONTENT_SECURITY_POLICY = "; ".join(
         "base-uri 'none'",
         "frame-ancestors 'none'",
         "form-action 'self'",
+        "require-trusted-types-for 'script'",
     )
 )
 
@@ -34,6 +35,8 @@ SECURITY_HEADERS: Mapping[str, str] = {
     "Referrer-Policy": "no-referrer",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "X-Frame-Options": "DENY",
 }
 
 API_PREFIX = "/api/"
