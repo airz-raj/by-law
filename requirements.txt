@@ -3,5 +3,5 @@ starlette==1.6.0
 uvicorn==0.53.0
 pydantic-settings==2.15.0
 python-multipart==0.0.32
-google-genai==2.24.0
+google-genai==2.25.0
 pypdf==6.19.0
