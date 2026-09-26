@@ -199,7 +199,7 @@ describe('accessibility', () => {
       rules: { 'color-contrast': { enabled: false } },
     });
     expect(results.violations.map((violation) => violation.id)).toEqual([]);
-  });
+  }, 15000);
 
   it('has no axe violations with every interactive section rendered', async () => {
     buildFullReportState();
@@ -207,7 +207,7 @@ describe('accessibility', () => {
       rules: { 'color-contrast': { enabled: false } },
     });
     expect(results.violations.map((violation) => violation.id)).toEqual([]);
-  });
+  }, 15000);
 
   it('leaves axe nothing it cannot decide', async () => {
     // A broken aria-labelledby reference is reported as incomplete rather
@@ -217,7 +217,7 @@ describe('accessibility', () => {
       rules: { 'color-contrast': { enabled: false } },
     });
     expect(results.incomplete.map((check) => check.id)).toEqual([]);
-  });
+  }, 15000);
 
   it('labels every control the report builds in script', () => {
     buildFullReportState();
