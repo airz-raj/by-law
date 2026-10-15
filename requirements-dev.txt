@@ -1,7 +1,7 @@
 -r requirements.txt
 pytest==9.0.3
 pytest-cov==6.1.1
-httpx2==2.13.0
+httpx2==2.13.1
 ruff==0.11.12
 mypy==1.15.0
 bandit==1.9.4
